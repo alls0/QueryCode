@@ -1,0 +1,37 @@
+name: query_code
+description: "A new Flutter project."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.2.3 <4.0.0'
+
+dependencies: # <--- BURASI KRİTİK: İKİ BOŞLUKLU HİZALANMALI
+  flutter:
+    sdk: flutter
+  fl_chart: ^0.68.0 # YENİ PAKET
+
+  cupertino_icons: ^1.0.8
+  firebase_core: ^3.1.1
+  cloud_firestore: ^5.0.2
+  shared_preferences: ^2.2.3
+  mobile_scanner: ^5.1.1
+  qr_flutter: ^4.1.0
+  app_links: ^6.4.1
+  easy_localization: ^3.0.8
+  
+  # --- YENİ EKLENEN PAKETLERİN DOĞRU YERİ ---
+  path_provider: ^2.1.1 
+  share_plus: ^7.2.1 
+  # ----------------------------------------
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/translations/

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "975114036167",
+    "project_id": "querycode-app",
+    "storage_bucket": "querycode-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:975114036167:android:942b8d2465c26a4909afe2",
+        "android_client_info": {
+          "package_name": "com.example.query_code"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDfgwr8SqUyvLLoyAxXMIx88MD7X-8G52g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
