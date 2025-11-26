@@ -26,50 +26,58 @@ class _QRResultScreenState extends State<QRResultScreen> {
   // --- TASARIM AYARLARI ---
   final List<String> _viewModes = ['LIST', 'STATS', 'CHART'];
   String _currentViewMode = 'LIST';
-  
-  // React tasarımındaki renk paleti
-  final Color _backgroundColor = const Color(0xFFF8FAFC); // Slate-50
-  final Color _primaryBlue = const Color(0xFF3B82F6);     // Blue-500
-  final Color _textDark = const Color(0xFF0F172A);        // Slate-900
-  final Color _textGray = const Color(0xFF64748B);        // Slate-500
-  final Color _borderColor = const Color(0xFFE2E8F0);     // Slate-200
+
+  // --- RENK PALETİ (GRİ & BEYAZ) ---
+  final Color _backgroundColor = const Color(0xFFF8FAFC);
+  final Color _primaryColor = const Color(0xFF2D3748);
+  final Color _secondaryColor = const Color(0xFF718096);
+  final Color _borderColor = const Color(0xFFE2E8F0);
 
   // --- İSTATİSTİK HESAPLAMA ---
   Map<String, dynamic> _calculateStatsLogic(
       Map<String, dynamic> results, List<dynamic> questions) {
     if (results.isEmpty) {
-      return {'stats': {}, 'totalRespondents': 0};
+      return {'stats': <String, Map<String, dynamic>>{}, 'totalRespondents': 0};
     }
 
     int totalRespondents = results.keys.length;
     Map<String, Map<String, dynamic>> stats = {};
 
     for (var question in questions) {
-      final questionText = question['questionText'];
+      final questionText = question['questionText'] as String? ?? "Unknown";
       Map<String, int> optionCounts = {};
-      for (var option in question['options']) {
-        optionCounts[option] = 0;
+      
+      final optionsList = (question['options'] as List<dynamic>? ?? []);
+      for (var option in optionsList) {
+        optionCounts[option.toString()] = 0;
       }
+
       for (var respondentAnswers in results.values) {
-        for (var answer in respondentAnswers) {
-          if (answer['question'] == questionText) {
-            final selectedOption = answer['answer'];
-            if (optionCounts.containsKey(selectedOption)) {
-              optionCounts[selectedOption] = optionCounts[selectedOption]! + 1;
+        if (respondentAnswers is List) {
+          for (var answer in respondentAnswers) {
+            if (answer is Map && answer['question'] == questionText) {
+              final selectedOption = answer['answer'];
+              if (selectedOption != null && optionCounts.containsKey(selectedOption)) {
+                optionCounts[selectedOption] = optionCounts[selectedOption]! + 1;
+              }
+              break;
             }
-            break;
           }
         }
       }
+
       int totalVotesForQuestion =
           optionCounts.values.fold(0, (sum, count) => sum + count);
+      
       Map<String, dynamic> finalStats = {};
       optionCounts.forEach((option, count) {
+        double percent = totalVotesForQuestion == 0
+            ? 0.0
+            : (count / totalVotesForQuestion) * 100;
+            
         finalStats[option] = {
           'count': count,
-          'percent': totalVotesForQuestion == 0
-              ? 0.0
-              : (count / totalVotesForQuestion) * 100,
+          'percent': percent, 
         };
       });
       stats[questionText] = {
@@ -104,67 +112,81 @@ class _QRResultScreenState extends State<QRResultScreen> {
     }
   }
 
-  // --- QR MODAL ---
-  void _showQrModal(BuildContext context, String qrData) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40, height: 4,
-              margin: const EdgeInsets.only(bottom: 24),
-              decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
-            ),
-            RepaintBoundary(
-              key: _qrKey,
-              child: QrImageView(
-                data: qrData,
-                size: 200,
-                backgroundColor: Colors.white,
+  // --- YENİ MODERN HEADER (APPBAR YERİNE) ---
+  Widget _buildHeader(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // 1. Özel Geri Butonu (Kare, Gölgeli, Modern)
+          GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: _borderColor),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
+              child: Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: _primaryColor),
             ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                icon: const Icon(Icons.share, color: Colors.white),
-                label: Text("share_qr".tr()), 
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _primaryBlue,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  elevation: 0,
+          ),
+
+          // 2. Başlık ve Alt Başlık
+          Column(
+            children: [
+              Text(
+                "LIVE RESULTS", // Modern bir üst başlık
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.5,
+                  color: _secondaryColor,
                 ),
-                onPressed: () {
-                  Navigator.pop(context);
-                  _shareQrCode();
-                },
               ),
-            ),
-          ],
-        ),
+              const SizedBox(height: 4),
+              Text(
+                _eventTitle.isEmpty ? "Results" : _eventTitle,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: _primaryColor,
+                ),
+              ),
+            ],
+          ),
+
+          // 3. Dengeleyici Boşluk (Simetri için)
+          const SizedBox(width: 48), 
+        ],
       ),
     );
   }
 
-  // --- GÖRÜNÜM SEÇİCİ (Segmented Control) ---
+  // --- GÖRÜNÜM SEÇİCİ ---
   Widget _buildViewSelector() {
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: _borderColor),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Row(
         children: _viewModes.map((mode) {
@@ -176,17 +198,16 @@ class _QRResultScreenState extends State<QRResultScreen> {
                 duration: const Duration(milliseconds: 200),
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 decoration: BoxDecoration(
-                  color: isSelected ? const Color(0xFFEFF6FF) : Colors.transparent, // Blue-50
-                  borderRadius: BorderRadius.circular(8),
+                  color: isSelected ? _primaryColor : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  // Dil dosyasına göre: "Liste", "İstatistik", "Grafik"
                   mode == 'LIST' ? "List" : mode == 'STATS' ? "Stats" : "Chart", 
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 14,
-                    color: isSelected ? _primaryBlue : _textGray,
+                    color: isSelected ? Colors.white : _secondaryColor,
                   ),
                 ),
               ),
@@ -207,7 +228,7 @@ class _QRResultScreenState extends State<QRResultScreen> {
       separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         final name = results.keys.elementAt(index);
-        final answers = results[name] as List<dynamic>;
+        final answers = (results[name] as List<dynamic>? ?? []);
         
         return Container(
           decoration: BoxDecoration(
@@ -217,22 +238,32 @@ class _QRResultScreenState extends State<QRResultScreen> {
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.02),
-                blurRadius: 2,
-                offset: const Offset(0, 1),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
               )
             ],
           ),
           child: ExpansionTile(
             shape: const Border(),
+            collapsedIconColor: _secondaryColor,
+            iconColor: _primaryColor,
             leading: CircleAvatar(
-              backgroundColor: const Color(0xFFF1F5F9),
-              child: Text(name[0].toUpperCase(), style: TextStyle(color: _primaryBlue, fontWeight: FontWeight.bold)),
+              backgroundColor: const Color(0xFFEDF2F7),
+              child: Text(
+                name.isNotEmpty ? name[0].toUpperCase() : "?",
+                style: TextStyle(color: _primaryColor, fontWeight: FontWeight.bold)
+              ),
             ),
-            title: Text(name, style: TextStyle(fontWeight: FontWeight.w600, color: _textDark)),
-            children: answers.map((a) => ListTile(
-              title: Text(a['question'], style: TextStyle(fontSize: 13, color: _textGray)),
-              trailing: Text(a['answer'], style: TextStyle(fontWeight: FontWeight.w600, color: _textDark)),
-            )).toList(),
+            title: Text(name, style: TextStyle(fontWeight: FontWeight.w700, color: _primaryColor)),
+            children: answers.map((a) {
+              if (a is Map) {
+                return ListTile(
+                  title: Text(a['question']?.toString() ?? '', style: TextStyle(fontSize: 13, color: _secondaryColor)),
+                  trailing: Text(a['answer']?.toString() ?? '', style: TextStyle(fontWeight: FontWeight.w600, color: _primaryColor)),
+                );
+              }
+              return const SizedBox.shrink();
+            }).toList(),
           ),
         );
       },
@@ -240,17 +271,16 @@ class _QRResultScreenState extends State<QRResultScreen> {
   }
 
   // --- İSTATİSTİK GÖRÜNÜMÜ ---
-  Widget _buildStatsView(Map<String, Map<String, dynamic>> stats) {
+  Widget _buildStatsView(Map<String, dynamic> stats) {
     if (stats.isEmpty) return _buildEmptyState();
 
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       children: stats.entries.map((entry) {
         final question = entry.key;
-        final options = entry.value['options'] as Map<String, dynamic>;
-        
-        // Bu soruya verilen toplam oy sayısı
-        final questionTotalVotes = entry.value['totalVotes'] as int;
+        final entryValue = entry.value as Map<dynamic, dynamic>? ?? {};
+        final options = Map<String, dynamic>.from(entryValue['options'] as Map? ?? {});
+        final questionTotalVotes = (entryValue['totalVotes'] as num?)?.toInt() ?? 0;
 
         return Container(
           margin: const EdgeInsets.only(bottom: 16),
@@ -264,11 +294,12 @@ class _QRResultScreenState extends State<QRResultScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(question, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: _textDark)),
+              Text(question, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: _primaryColor)),
               const SizedBox(height: 20),
               ...options.entries.map((opt) {
-                final count = opt.value['count'] as int;
-                final percent = (opt.value['percent'] as double) / 100;
+                final optValue = opt.value as Map<dynamic, dynamic>? ?? {};
+                final rawPercent = (optValue['percent'] as num?)?.toDouble() ?? 0.0;
+                final percent = rawPercent / 100;
                 
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 16),
@@ -277,18 +308,20 @@ class _QRResultScreenState extends State<QRResultScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(opt.key, style: TextStyle(color: _textDark, fontWeight: FontWeight.w500)),
-                          Text("${(percent * 100).toStringAsFixed(0)}%", style: TextStyle(color: _textDark, fontWeight: FontWeight.bold)),
+                          Flexible(
+                            child: Text(opt.key, style: TextStyle(color: _primaryColor, fontWeight: FontWeight.w500))
+                          ),
+                          Text("${(percent * 100).toStringAsFixed(0)}%", style: TextStyle(color: _primaryColor, fontWeight: FontWeight.bold)),
                         ],
                       ),
                       const SizedBox(height: 8),
                       ClipRRect(
                         borderRadius: BorderRadius.circular(4),
                         child: LinearProgressIndicator(
-                          value: percent,
+                          value: percent.isNaN ? 0.0 : percent,
                           minHeight: 8,
-                          backgroundColor: const Color(0xFFF1F5F9), // Slate-100
-                          valueColor: AlwaysStoppedAnimation(_primaryBlue),
+                          backgroundColor: const Color(0xFFEDF2F7), 
+                          valueColor: AlwaysStoppedAnimation(_primaryColor),
                         ),
                       ),
                     ],
@@ -299,8 +332,8 @@ class _QRResultScreenState extends State<QRResultScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text("total_responses".tr(), style: TextStyle(color: _textGray)),
-                  Text("$questionTotalVotes", style: TextStyle(color: _textDark, fontWeight: FontWeight.bold)),
+                  Text("total_responses".tr(), style: TextStyle(color: _secondaryColor, fontSize: 14)),
+                  Text("$questionTotalVotes", style: TextStyle(color: _primaryColor, fontSize: 16, fontWeight: FontWeight.bold)),
                 ],
               )
             ],
@@ -310,8 +343,8 @@ class _QRResultScreenState extends State<QRResultScreen> {
     );
   }
 
-  // --- GRAFİK GÖRÜNÜMÜ (React Tasarımı Entegre Edildi) ---
-  Widget _buildChartView(Map<String, Map<String, dynamic>> stats) {
+  // --- GRAFİK GÖRÜNÜMÜ ---
+  Widget _buildChartView(Map<String, dynamic> stats) {
      if (stats.isEmpty) return _buildEmptyState();
      
      final keys = stats.keys.toList();
@@ -320,30 +353,33 @@ class _QRResultScreenState extends State<QRResultScreen> {
        itemCount: keys.length,
        itemBuilder: (context, index) {
          final question = keys[index];
-         final options = stats[question]!['options'] as Map<String, dynamic>;
-         final totalVotes = stats[question]!['totalVotes'] as int;
+         final entryValue = stats[question] as Map<dynamic, dynamic>? ?? {};
+         final options = Map<String, dynamic>.from(entryValue['options'] as Map? ?? {});
+         final totalVotes = (entryValue['totalVotes'] as num?)?.toInt() ?? 0;
          
-         // Maksimum oy sayısını bul (Y ekseni aralığı için)
          int maxVote = 0;
          options.forEach((_, val) {
-           final c = val['count'] as int;
+           final valMap = val as Map<dynamic, dynamic>? ?? {};
+           final c = (valMap['count'] as num?)?.toInt() ?? 0;
            if(c > maxVote) maxVote = c;
          });
-         // Y ekseninin biraz boşluklu durması için tavan değer
          final double maxY = (maxVote == 0 ? 5 : maxVote * 1.2).toDouble();
 
          final barGroups = options.entries.toList().asMap().entries.map((e) {
+            final valMap = e.value.value as Map<dynamic, dynamic>? ?? {};
+            final count = (valMap['count'] as num?)?.toInt() ?? 0;
+            
             return BarChartGroupData(
               x: e.key,
               barRods: [BarChartRodData(
-                toY: (e.value.value['count'] as int).toDouble(),
-                color: _primaryBlue, // React kodundaki #3B82F6
-                width: 32, // Biraz daha kalın çubuklar
+                toY: count.toDouble(),
+                color: _primaryColor,
+                width: 32, 
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
                 backDrawRodData: BackgroundBarChartRodData(
                   show: true,
                   toY: maxY,
-                  color: Colors.transparent, // Arkaplan çubuğu görünmez
+                  color: Colors.transparent, 
                 ),
               )],
             );
@@ -353,54 +389,42 @@ class _QRResultScreenState extends State<QRResultScreen> {
            margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
            padding: const EdgeInsets.all(24),
            decoration: BoxDecoration(
-             color: Colors.white, // bg-white
-             borderRadius: BorderRadius.circular(16), // rounded-2xl
-             border: Border.all(color: _borderColor), // border-gray-100
-             boxShadow: [ // shadow-sm
+             color: Colors.white,
+             borderRadius: BorderRadius.circular(16),
+             border: Border.all(color: _borderColor), 
+             boxShadow: [ 
                BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 4, offset: const Offset(0, 2))
              ],
            ),
            child: Column(
              crossAxisAlignment: CrossAxisAlignment.start,
              children: [
-               // Başlık
                Text(
                  question, 
-                 style: TextStyle(
-                   fontSize: 16, 
-                   fontWeight: FontWeight.w600, 
-                   color: _textDark // text-gray-900
-                 ),
+                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: _primaryColor),
                  maxLines: 2,
                  overflow: TextOverflow.ellipsis,
                ),
                const SizedBox(height: 24),
-               
-               // Grafik Alanı
                Expanded(
                  child: BarChart(
                    BarChartData(
                      maxY: maxY,
                      barGroups: barGroups,
-                     // Izgara Çizgileri (React: strokeDasharray="3 3")
                      gridData: FlGridData(
                        show: true,
                        drawVerticalLine: false,
                        getDrawingHorizontalLine: (value) => FlLine(
-                         color: const Color(0xFFF1F5F9), // stroke="#F1F5F9"
+                         color: _borderColor, 
                          strokeWidth: 1,
-                         dashArray: [3, 3], // Kesikli çizgi efekti
+                         dashArray: [3, 3], 
                        ),
                      ),
-                     // Kenarlıklar
                      borderData: FlBorderData(show: false),
-                     // Eksen Başlıkları
                      titlesData: FlTitlesData(
                        topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
                        rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                       // Y Ekseni (React: AxisLine=false)
                        leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)), 
-                       // X Ekseni
                        bottomTitles: AxisTitles(
                          sideTitles: SideTitles(
                            showTitles: true,
@@ -411,10 +435,7 @@ class _QRResultScreenState extends State<QRResultScreen> {
                                padding: const EdgeInsets.only(top: 12.0),
                                child: Text(
                                  text.length > 8 ? "${text.substring(0,8)}.." : text, 
-                                 style: TextStyle(
-                                   fontSize: 12, 
-                                   color: _textGray // fill="#64748B"
-                                 ),
+                                 style: TextStyle(fontSize: 12, color: _secondaryColor),
                                ),
                              );
                            },
@@ -422,31 +443,21 @@ class _QRResultScreenState extends State<QRResultScreen> {
                          )
                        ),
                      ),
-                     // Tooltip Ayarları
                      barTouchData: BarTouchData(
                        touchTooltipData: BarTouchTooltipData(
-                         getTooltipColor: (_) => Colors.white, // backgroundColor: 'white'
-                         tooltipBorder: BorderSide(color: _borderColor), // border
+                         getTooltipColor: (_) => Colors.white,
+                         tooltipBorder: BorderSide(color: _borderColor),
                          tooltipPadding: const EdgeInsets.all(8),
                          tooltipMargin: 8,
-                         // İçerik stili
                          getTooltipItem: (group, groupIndex, rod, rodIndex) {
                            final optionName = options.keys.elementAt(group.x);
                            return BarTooltipItem(
                              '$optionName\n',
-                             TextStyle(
-                               color: _textGray,
-                               fontWeight: FontWeight.w500,
-                               fontSize: 12,
-                             ),
+                             TextStyle(color: _secondaryColor, fontWeight: FontWeight.w500, fontSize: 12),
                              children: <TextSpan>[
                                TextSpan(
                                  text: '${rod.toY.toInt()} Votes',
-                                 style: TextStyle(
-                                   color: _textDark,
-                                   fontSize: 14,
-                                   fontWeight: FontWeight.bold,
-                                 ),
+                                 style: TextStyle(color: _primaryColor, fontSize: 14, fontWeight: FontWeight.bold),
                                ),
                              ],
                            );
@@ -456,30 +467,20 @@ class _QRResultScreenState extends State<QRResultScreen> {
                    ),
                  ),
                ),
-               
-               // Footer Alanı (React: mt-6 pt-4 border-t border-gray-100)
                Container(
                  margin: const EdgeInsets.only(top: 24),
                  padding: const EdgeInsets.only(top: 16),
                  decoration: BoxDecoration(
-                   border: Border(top: BorderSide(color: const Color(0xFFF1F5F9))),
+                   border: Border(top: BorderSide(color: _borderColor)),
                  ),
                  child: Row(
                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                    children: [
-                     Text(
-                       "total_responses".tr(), // Total Responses
-                       style: TextStyle(color: _textGray, fontSize: 14),
-                     ),
-                     Text(
-                       "$totalVotes", 
-                       style: TextStyle(color: _textDark, fontSize: 16, fontWeight: FontWeight.bold),
-                     ),
+                     Text("total_responses".tr(), style: TextStyle(color: _secondaryColor, fontSize: 14)),
+                     Text("$totalVotes", style: TextStyle(color: _primaryColor, fontSize: 16, fontWeight: FontWeight.bold)),
                    ],
                  ),
                ),
-               
-               // Sayfa İndikatörü (Ekstra)
                Center(
                  child: Padding(
                    padding: const EdgeInsets.only(top: 10),
@@ -513,51 +514,113 @@ class _QRResultScreenState extends State<QRResultScreen> {
 
     return Scaffold(
       backgroundColor: _backgroundColor,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        centerTitle: true,
-        title: Text(_eventTitle.isEmpty ? "Results" : _eventTitle, style: TextStyle(color: _textDark, fontWeight: FontWeight.bold)),
-        leading: BackButton(color: _textDark),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.qr_code_2_rounded, color: _primaryBlue),
-            onPressed: () => _showQrModal(context, qrData),
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
-      body: StreamBuilder<DocumentSnapshot>(
-        stream: eventRef.snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
-          
-          if (!snapshot.hasData || !snapshot.data!.exists) return const Center(child: Text("Event not found"));
-          
-          final data = snapshot.data!.data() as Map<String, dynamic>;
-          if (_eventTitle.isEmpty) {
-             WidgetsBinding.instance.addPostFrameCallback((_) {
-               if(mounted) setState(() => _eventTitle = data['title'] ?? 'Results');
-             });
-          }
+      // APPBAR KALDIRILDI, BODY İÇİNDE CUSTOM HEADER VAR
+      body: SafeArea(
+        child: Column(
+          children: [
+            // 1. YENİ CUSTOM HEADER
+            _buildHeader(context),
+            
+            // 2. İÇERİK (StreamBuilder)
+            Expanded(
+              child: StreamBuilder<DocumentSnapshot>(
+                stream: eventRef.snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+                  
+                  if (!snapshot.hasData || !snapshot.data!.exists) return const Center(child: Text("Event not found"));
+                  
+                  final data = snapshot.data!.data() as Map<String, dynamic>;
+                  if (_eventTitle.isEmpty) {
+                     WidgetsBinding.instance.addPostFrameCallback((_) {
+                       if(mounted) setState(() => _eventTitle = data['title'] ?? 'Results');
+                     });
+                  }
+        
+                  final results = Map<String, dynamic>.from(data['results'] as Map? ?? {});
+                  final questions = data['questions'] as List<dynamic>? ?? [];
+                  
+                  final stats = _calculateStatsLogic(results, questions);
+        
+                  return SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        // QR KODU KARTI
+                        Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: _borderColor),
+                            boxShadow: [
+                              BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8, offset: const Offset(0, 4))
+                            ]
+                          ),
+                          child: Column(
+                            children: [
+                              RepaintBoundary(
+                                key: _qrKey,
+                                child: QrImageView(
+                                  data: qrData,
+                                  size: 180,
+                                  backgroundColor: Colors.white,
+                                  dataModuleStyle: QrDataModuleStyle(dataModuleShape: QrDataModuleShape.square, color: _primaryColor),
+                                  eyeStyle: QrEyeStyle(eyeShape: QrEyeShape.square, color: _primaryColor),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton.icon(
+                                  onPressed: _shareQrCode,
+                                  icon: Icon(Icons.ios_share_rounded, color: _primaryColor, size: 22),
+                                  label: Text(
+                                    "share_qr".tr(),
+                                    style: TextStyle(
+                                      color: _primaryColor,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFFF1F5F9), 
+                                    foregroundColor: _primaryColor.withOpacity(0.1),
+                                    elevation: 0,
+                                    side: BorderSide.none,
+                                    padding: const EdgeInsets.symmetric(vertical: 18),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        
+                        const SizedBox(height: 8),
+                        _buildViewSelector(),
+                        const SizedBox(height: 8),
 
-          final results = Map<String, dynamic>.from(data['results'] ?? {});
-          final questions = data['questions'] ?? [];
-          final stats = _calculateStatsLogic(results, questions);
-
-          return Column(
-            children: [
-              _buildViewSelector(),
-              Expanded(
-                child: _currentViewMode == 'LIST' 
-                  ? _buildListView(results)
-                  : _currentViewMode == 'STATS'
-                    ? _buildStatsView(stats['stats'])
-                    : _buildChartView(stats['stats']),
+                        // İÇERİK (LİSTE/GRAFİK)
+                        // Expanded yerine Container kullanıyoruz çünkü SingleChildScrollView içindeyiz
+                        // Boyut hatası almamak için height veriyoruz veya shrinkWrap kullanıyoruz.
+                        // Ancak ListView içinde ListView olduğu için "shrinkWrap: true" ve "physics: NeverScrollableScrollPhysics" kullanmalıyız.
+                        // Fakat view modlarına göre dönen widget'lar ListView. O yüzden onları düzenlememiz lazım.
+                        // En temizi: _buildListView vb. metodların içindeki ListView'ı Column'a çevirmek veya shrinkWrap eklemektir.
+                        // AŞAĞIDAKİ SizedBox ÇÖZÜMÜ GEÇİCİDİR, EKRAN BOYUTUNA GÖRE AYARLANMALIDIR.
+                        // DAHA İYİ ÇÖZÜM: SingleChildScrollView'ı kaldırıp Column yapısına geri dönmek.
+                        
+                      ],
+                    ),
+                  );
+                },
               ),
-            ],
-          );
-        },
+            ),
+          ],
+        ),
       ),
     );
   }
