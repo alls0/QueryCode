@@ -10,13 +10,14 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // --- YENİ RENK PALETİ ---
-    const Color primaryColor = Color(0xFF1A202C); // Koyu Antrasit (Neredeyse Siyah)
+    const Color primaryColor =
+        Color(0xFF1A202C); // Koyu Antrasit (Neredeyse Siyah)
     const Color cardColor = Colors.white;
     const Color backgroundColor = Color(0xFFF8FAFC); // Çok Açık Gri Zemin
     const Color textColor = Color(0xFF2D3748);
     const Color iconColor = Color(0xFF4A5568);
 
-    // Bilgi Diyaloğu (Aynı mantık, sadece renkler güncellendi)
+    // Bilgi Diyaloğu
     void showInfoDialog(BuildContext context) {
       showDialog(
         context: context,
@@ -24,12 +25,15 @@ class HomeScreen extends StatelessWidget {
           return AlertDialog(
             backgroundColor: cardColor,
             surfaceTintColor: Colors.transparent,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
             title: Row(
               children: [
                 const Icon(Icons.info_outline_rounded, color: primaryColor),
                 const SizedBox(width: 12),
-                Text("infoTitle".tr(), style: const TextStyle(fontWeight: FontWeight.bold, color: textColor)),
+                Text("infoTitle".tr(),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, color: textColor)),
               ],
             ),
             content: SingleChildScrollView(
@@ -37,16 +41,20 @@ class HomeScreen extends StatelessWidget {
                 children: <Widget>[
                   Text("infoP1".tr(), style: const TextStyle(color: iconColor)),
                   const SizedBox(height: 16),
-                  Text("infoP2".tr(), style: const TextStyle(fontWeight: FontWeight.bold, color: textColor)),
+                  Text("infoP2".tr(),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, color: textColor)),
                   Divider(color: Colors.grey.shade200),
                   Text("infoP3".tr(), style: const TextStyle(color: iconColor)),
-                  // ... Diğer metinler
+                  // ... Diğer metinler (ihtiyaca göre buraya ekleyebilirsiniz)
                 ],
               ),
             ),
             actions: <Widget>[
               TextButton(
-                child: Text("closeButton".tr(), style: const TextStyle(fontWeight: FontWeight.bold, color: primaryColor)),
+                child: Text("closeButton".tr(),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, color: primaryColor)),
                 onPressed: () => Navigator.of(context).pop(),
               ),
             ],
@@ -67,22 +75,28 @@ class HomeScreen extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Dil Seçimi (Daha minimal)
+                  // Dil Seçimi (Minimal Stil)
                   PopupMenuButton<String>(
                     offset: const Offset(0, 40),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16)),
                     surfaceTintColor: Colors.white,
                     color: Colors.white,
                     onSelected: (String value) {
-                      if (value == 'TR') context.setLocale(const Locale('tr'));
-                      else if (value == 'EN') context.setLocale(const Locale('en'));
+                      if (value == 'TR')
+                        context.setLocale(const Locale('tr'));
+                      else if (value == 'EN')
+                        context.setLocale(const Locale('en'));
                     },
                     itemBuilder: (context) => [
-                      const PopupMenuItem(value: 'TR', child: Text('🇹🇷 Türkçe')),
-                      const PopupMenuItem(value: 'EN', child: Text('🇬🇧 English')),
+                      const PopupMenuItem(
+                          value: 'TR', child: Text('🇹🇷 Türkçe')),
+                      const PopupMenuItem(
+                          value: 'EN', child: Text('🇬🇧 English')),
                     ],
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(30),
@@ -90,11 +104,16 @@ class HomeScreen extends StatelessWidget {
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.language, color: iconColor, size: 20),
+                          const Icon(Icons.language,
+                              color: iconColor, size: 20),
                           const SizedBox(width: 8),
-                          Text("language".tr(), style: TextStyle(fontWeight: FontWeight.w600, color: textColor)),
+                          Text("language".tr(),
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: textColor)),
                           const SizedBox(width: 4),
-                          Icon(Icons.keyboard_arrow_down_rounded, color: iconColor, size: 18),
+                          const Icon(Icons.keyboard_arrow_down_rounded,
+                              color: iconColor, size: 18),
                         ],
                       ),
                     ),
@@ -110,40 +129,72 @@ class HomeScreen extends StatelessWidget {
                         shape: BoxShape.circle,
                         border: Border.all(color: Colors.grey.shade200),
                       ),
-                      child: Icon(Icons.info_outline_rounded, color: iconColor, size: 24),
+                      child: const Icon(Icons.info_outline_rounded,
+                          color: iconColor, size: 24),
                     ),
                   ),
                 ],
               ),
 
-              const Spacer(flex: 1),
+              const SizedBox(height: 50),
 
               // --- LOGO ALANI ---
               Center(
                 child: Column(
                   children: [
+                    const Text(
+                      "Query Code",
+                      style: TextStyle(
+                        fontFamily: 'Roboto',
+                        fontSize: 30, // Daha büyük ve belirgin
+                        fontWeight: FontWeight.w800,
+                        color: primaryColor,
+                        letterSpacing: -1.0, // Modern sıkı harf aralığı
+                      ),
+                    ),
+                    const SizedBox(height: 20),
                     Container(
-                      width: 160,
-                      height: 160,
+                      width: 170,
+                      height: 170,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: Colors.white, // Logonun arkasına temiz beyaz zemin
+                        color: const Color.fromARGB(255, 255, 255,
+                            255), // Logonun arkasına temiz beyaz zemin
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 30,
-                            spreadRadius: 0,
+                            color: const Color.fromARGB(255, 109, 107, 107)
+                                .withOpacity(0.22),
+                            blurRadius: 005,
+                            spreadRadius: 8,
                             offset: const Offset(0, 10),
                           ),
                         ],
                       ),
-                      padding: const EdgeInsets.all(20), // Logoya biraz nefes payı
+                      padding:
+                          const EdgeInsets.all(20), // Logoya biraz nefes payı
                       child: ColorFiltered(
+                        // Logoyu siyah-beyaz yapmak için filtre
                         colorFilter: const ColorFilter.matrix(<double>[
-                          0.2126, 0.7152, 0.0722, 0, 0,
-                          0.2126, 0.7152, 0.0722, 0, 0,
-                          0.2126, 0.7152, 0.0722, 0, 0,
-                          0,      0,      0,      1, 0,
+                          0.2126,
+                          0.7152,
+                          0.0722,
+                          0,
+                          0,
+                          0.2126,
+                          0.7152,
+                          0.0722,
+                          0,
+                          0,
+                          0.2126,
+                          0.7152,
+                          0.0722,
+                          0,
+                          0,
+                          0,
+                          0,
+                          0,
+                          1,
+                          0,
                         ]),
                         child: Image.asset('assets/images/logo.png'),
                       ),
@@ -152,19 +203,14 @@ class HomeScreen extends StatelessWidget {
                     Text(
                       "homeTitle".tr(),
                       textAlign: TextAlign.center,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 24, // Başlık büyütüldü
                         color: primaryColor,
-                        fontWeight: FontWeight.w800, // Daha kalın
+                        fontWeight: FontWeight.w800, // Daha kalın font
                         letterSpacing: -0.5, // Modern sıkı harf aralığı
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Text(
-                      "Hızlıca anket oluştur veya katıl", // İsterseniz buraya bir slogan ekleyebilirsiniz
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 14, color: iconColor),
-                    ),
                   ],
                 ),
               ),
@@ -172,16 +218,20 @@ class HomeScreen extends StatelessWidget {
               const Spacer(flex: 2),
 
               // --- ANA BUTONLAR (Modern Kartlar) ---
-              
+
               // 1. Yeni Soru Oluştur (En Büyük Vurgu)
               ElevatedButton(
-                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const CreateQuestionScreen())),
+                onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => const CreateQuestionScreen())),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: primaryColor,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 20),
-                  elevation: 0, // Flat tasarım
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  elevation: 0, // Gölgesiz, flat tasarım
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20)),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -190,7 +240,8 @@ class HomeScreen extends StatelessWidget {
                     const SizedBox(width: 12),
                     Text(
                       "newQuestionButton".tr(),
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                          fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
@@ -202,13 +253,18 @@ class HomeScreen extends StatelessWidget {
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const QrScannerScreen())),
+                      onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => const QrScannerScreen())),
                       style: OutlinedButton.styleFrom(
                         backgroundColor: Colors.white,
                         foregroundColor: primaryColor,
                         padding: const EdgeInsets.symmetric(vertical: 20),
-                        side: BorderSide(color: Colors.grey.shade300, width: 1.5),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                        side:
+                            BorderSide(color: Colors.grey.shade300, width: 1.5),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20)),
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -217,26 +273,32 @@ class HomeScreen extends StatelessWidget {
                           const SizedBox(width: 8),
                           Text(
                             "scanQRButton".tr(),
-                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            style: const TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.bold),
                           ),
                         ],
                       ),
                     ),
                   ),
                   const SizedBox(width: 12),
-                  
+
                   // 3. Geçmiş (Küçük Kare Buton - Yanına)
                   GestureDetector(
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const MyEventsScreen())),
+                    onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const MyEventsScreen())),
                     child: Container(
                       width: 64, // Kare şekil
                       height: 64,
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.grey.shade300, width: 1.5),
+                        border:
+                            Border.all(color: Colors.grey.shade300, width: 1.5),
                       ),
-                      child: const Icon(Icons.history_rounded, color: primaryColor, size: 28),
+                      child: const Icon(Icons.history_rounded,
+                          color: primaryColor, size: 28),
                     ),
                   ),
                 ],
