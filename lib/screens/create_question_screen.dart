@@ -2,12 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'qr_result_screen.dart';
-import 'package:easy_localization/easy_localization.dart'; // YENİ: Paketi import et
+import 'package:easy_localization/easy_localization.dart';
 
+// --- MODEL ---
 class QuestionModel {
   String questionText;
   List<String> options;
-  QuestionModel({this.questionText = '', required this.options});
+  // Her soru kendi controller'larını tutsun ki PageView'da kaybolmasınlar
+  TextEditingController textController;
+  List<TextEditingController> optionControllers;
+
+  QuestionModel({
+    this.questionText = '',
+    required this.options,
+  })  : textController = TextEditingController(text: questionText),
+        optionControllers =
+            options.map((e) => TextEditingController(text: e)).toList();
 }
 
 class CreateQuestionScreen extends StatefulWidget {
@@ -17,71 +27,108 @@ class CreateQuestionScreen extends StatefulWidget {
 }
 
 class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
-  final List<QuestionModel> _questions = [
-    QuestionModel(options: ['', '']),
-  ];
-  // _CreateQuestionScreenState sınıfının içine, diğer değişkenlerin (ör: final List<QuestionModel> _questions = [...];) hemen altına ekle.
+  // --- VERİLER ---
+  late List<QuestionModel> _questions;
   late TextEditingController _eventTitleController;
-// ...
+  late PageController _pageController;
+
   int _activeIndex = 0;
   Duration _selectedDuration = Duration.zero;
   bool _isNicknameRequired = true;
-  late TextEditingController _questionController;
-  late List<TextEditingController> _optionControllers;
   bool _isLoading = false;
+
+  // --- TASARIM RENKLERİ ---
+  final Color _bgLight = const Color(0xFFF8FAFC);
+  final Color _primaryDark = const Color(0xFF2D3748);
+  final Color primaryDark = const Color(0xFF3182CE);
+  final Color _softGrey = const Color(0xFFA0AEC0);
+  final Color _surfaceWhite = Colors.white;
 
   @override
   void initState() {
     super.initState();
-    _setupControllersForIndex(_activeIndex);
-    // YENİ: Başlık kontrolcüsünü başlat
+    _questions = [
+      QuestionModel(options: ['', '']),
+    ];
     _eventTitleController = TextEditingController();
+    _pageController =
+        PageController(viewportFraction: 0.92); // Kartların kenarları görünsün
   }
 
   @override
   void dispose() {
-    _questionController.dispose();
-    _eventTitleController.dispose(); // YENİ: Başlık kontrolcüsünü kapat
-    for (var controller in _optionControllers) {
-      controller.dispose();
+    _eventTitleController.dispose();
+    _pageController.dispose();
+    for (var q in _questions) {
+      q.textController.dispose();
+      for (var o in q.optionControllers) {
+        o.dispose();
+      }
     }
     super.dispose();
   }
 
-  // MEVCUT _createEventAndNavigate FONKSİYONUNU BUNUNLA DEĞİŞTİR:
-  Future<void> _createEventAndNavigate() async {
+  // --- LOGIC: VERİ GÜNCELLEME ---
+  void _syncData() {
+    // Controller'daki verileri modele eşitle
+    for (var q in _questions) {
+      q.questionText = q.textController.text;
+      q.options = q.optionControllers.map((c) => c.text).toList();
+    }
+  }
+
+  // --- LOGIC: YENİ SORU EKLEME ---
+  void _addNewQuestion() {
+    _syncData();
     setState(() {
-      _isLoading = true;
+      _questions.add(QuestionModel(options: ['', '']));
     });
+    // Yeni eklenen soruya animasyonla git
+    Future.delayed(const Duration(milliseconds: 100), () {
+      _pageController.animateToPage(
+        _questions.length - 1,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeOutCubic,
+      );
+    });
+  }
+
+  // --- LOGIC: SORU SİLME ---
+  void _removeQuestion(int index) {
+    if (_questions.length <= 1) return; // En az 1 soru kalmalı
+
+    // Klavyeyi kapat
+    FocusScope.of(context).unfocus();
+
+    setState(() {
+      _questions.removeAt(index);
+      // Index güvenliği
+      if (_activeIndex >= _questions.length) {
+        _activeIndex = _questions.length - 1;
+      }
+    });
+  }
+
+  // --- LOGIC: ETKİNLİK OLUŞTURMA ---
+  Future<void> _createEventAndNavigate() async {
+    _syncData(); // Son durumu kaydet
+    setState(() => _isLoading = true);
+
     try {
       final prefs = await SharedPreferences.getInstance();
       final List<String> savedEvents =
           prefs.getStringList('saved_events') ?? [];
 
       if (savedEvents.length >= 15) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text("memory_full".tr()),
-              backgroundColor: Colors.red,
-              duration: const Duration(seconds: 4),
-            ),
-          );
-          setState(() {
-            _isLoading = false;
-          });
-        }
+        if (mounted) _showError("memory_full".tr());
         return;
       }
 
-      _saveCurrentQuestionData();
       final eventData = {
         'createdAt': Timestamp.now(),
-        // YENİ: Başlık bilgisini ekle
         'eventTitle': _eventTitleController.text.trim().isNotEmpty
             ? _eventTitleController.text.trim()
             : 'events_prefix'.tr() + (savedEvents.length + 1).toString(),
-
         'durationInSeconds': _selectedDuration.inSeconds,
         'isNicknameRequired': _isNicknameRequired,
         'questions': _questions
@@ -107,447 +154,458 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
         );
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("create_error".tr() + e.toString())),
-        );
-      }
+      if (mounted) _showError("create_error".tr() + e.toString());
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  void _setupControllersForIndex(int index) {
-    _questionController =
-        TextEditingController(text: _questions[index].questionText);
-    _optionControllers = _questions[index]
-        .options
-        .map((option) => TextEditingController(text: option))
-        .toList();
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message), backgroundColor: Colors.red));
+    setState(() => _isLoading = false);
   }
 
-  void _saveCurrentQuestionData() {
-    _questions[_activeIndex].questionText = _questionController.text;
-    for (int i = 0; i < _optionControllers.length; i++) {
-      if (i < _questions[_activeIndex].options.length) {
-        _questions[_activeIndex].options[i] = _optionControllers[i].text;
-      }
-    }
-  }
-
-  void _saveAndSwitchTo(int newIndex) {
-    _saveCurrentQuestionData();
-    setState(() {
-      _activeIndex = newIndex;
-      _setupControllersForIndex(newIndex);
-    });
-  }
-
-  void _selectTime(BuildContext context) {
+  // --- UI: BOTTOM SETTINGS SHEET (AYARLAR MENÜSÜ) ---
+  void _showSettingsSheet() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: _surfaceWhite,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                "create_timer_title".tr(),
-                style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20,
-                    color: Color(0xFF1A202C)),
+        return StatefulBuilder(builder: (context, setSheetState) {
+          return Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text("Settings",
+                    style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: _primaryDark)),
+                const SizedBox(height: 20),
+
+                // Rumuz Ayarı
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text("create_nickname_required".tr(),
+                      style: TextStyle(
+                          fontWeight: FontWeight.w600, color: _primaryDark)),
+                  value: _isNicknameRequired,
+                  activeColor: primaryDark,
+                  onChanged: (val) {
+                    setSheetState(() => _isNicknameRequired = val);
+                    this.setState(() =>
+                        _isNicknameRequired = val); // Ana ekranı da güncelle
+                  },
+                ),
+                Divider(color: _bgLight, thickness: 2),
+
+                // Süre Ayarı
+                const SizedBox(height: 10),
+                Text("create_timer_title".tr(),
+                    style: TextStyle(
+                        fontWeight: FontWeight.w600, color: _primaryDark)),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 10,
+                  children: [
+                    _buildDurationChip(
+                        "30s", const Duration(seconds: 30), setSheetState),
+                    _buildDurationChip(
+                        "1m", const Duration(minutes: 1), setSheetState),
+                    _buildDurationChip(
+                        "2m", const Duration(minutes: 2), setSheetState),
+                    _buildDurationChip("∞", Duration.zero, setSheetState),
+                  ],
+                ),
+                const SizedBox(height: 20),
+              ],
+            ),
+          );
+        });
+      },
+    );
+  }
+
+  Widget _buildDurationChip(
+      String label, Duration duration, StateSetter setSheetState) {
+    bool isSelected = _selectedDuration == duration;
+    return ChoiceChip(
+      label: Text(label),
+      selected: isSelected,
+      selectedColor: _primaryDark,
+      labelStyle: TextStyle(color: isSelected ? Colors.white : _primaryDark),
+      backgroundColor: _bgLight,
+      side: BorderSide.none,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      onSelected: (bool selected) {
+        setSheetState(() => _selectedDuration = duration);
+        this.setState(() => _selectedDuration = duration);
+      },
+    );
+  }
+
+  // --- UI: HEADER ---
+  Widget _buildHeader() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+      child: Row(
+        children: [
+          // Geri Butonu
+          GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                  color: _surfaceWhite,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                        color: Colors.black.withOpacity(0.05), blurRadius: 10)
+                  ]),
+              child: Icon(Icons.close_rounded, color: _primaryDark, size: 20),
+            ),
+          ),
+          const SizedBox(width: 16),
+          // Başlık Input
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              decoration: BoxDecoration(
+                color: _surfaceWhite,
+                borderRadius: BorderRadius.circular(30),
+                border: Border.all(color: Colors.grey.shade200),
               ),
-              const SizedBox(height: 20),
-              Wrap(
-                spacing: 10.0,
-                runSpacing: 10.0,
-                alignment: WrapAlignment.center,
-                children: [
-                  _buildDurationChip(
-                      "time_30s".tr(), const Duration(seconds: 30)),
-                  _buildDurationChip(
-                      "time_1m".tr(), const Duration(minutes: 1)),
-                  _buildDurationChip(
-                      "time_2m".tr(), const Duration(minutes: 2)),
-                  _buildDurationChip(
-                      "time_5m".tr(), const Duration(minutes: 5)),
-                  _buildDurationChip("time_indefinite".tr(), Duration.zero),
+              child: TextField(
+                controller: _eventTitleController,
+                style:
+                    TextStyle(fontWeight: FontWeight.bold, color: _primaryDark),
+                decoration: InputDecoration(
+                  hintText: "event_name_hint".tr(),
+                  border: InputBorder.none,
+                  icon: Icon(Icons.edit_rounded, size: 16, color: _softGrey),
+                  hintStyle: TextStyle(color: _softGrey),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- UI: SORU KARTI (CARD) ---
+  Widget _buildQuestionCard(int index) {
+    final question = _questions[index];
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 12),
+      decoration: BoxDecoration(
+        color: _surfaceWhite,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Kart Üstü: Soru Sayısı ve Silme
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 20, 20, 0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                      color: _bgLight, borderRadius: BorderRadius.circular(12)),
+                  child: Text(
+                    "Q${index + 1}",
+                    style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        color: _primaryDark,
+                        fontSize: 16),
+                  ),
+                ),
+                if (_questions.length > 1)
+                  IconButton(
+                    icon: Icon(Icons.delete_outline_rounded,
+                        color: Colors.red.shade300),
+                    onPressed: () => _removeQuestion(index),
+                  )
+              ],
+            ),
+          ),
+
+          // Soru İçeriği (Kaydırılabilir alan)
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.all(24),
+              children: [
+                // Soru Metni
+                TextField(
+                  controller: question.textController,
+                  maxLines: 3,
+                  style:
+                      TextStyle(fontSize: 18, color: _primaryDark, height: 1.4),
+                  decoration: InputDecoration(
+                    hintText: "create_question_hint".tr(),
+                    hintStyle: TextStyle(
+                        color: _softGrey.withOpacity(0.5), fontSize: 18),
+                    border: InputBorder.none,
+                    filled: true,
+                    fillColor: _bgLight,
+                    contentPadding: const EdgeInsets.all(16),
+                    enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide.none),
+                    focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide:
+                            BorderSide(color: _primaryDark.withOpacity(0.9))),
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Seçenekler Başlığı
+                Text("create_options_title".tr(),
+                    style: TextStyle(
+                        color: _softGrey,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                        letterSpacing: 1)),
+                const SizedBox(height: 12),
+
+                // Seçenek Listesi
+                ...List.generate(question.optionControllers.length, (optIndex) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                              color: _primaryDark.withOpacity(0.3),
+                              shape: BoxShape.circle),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextField(
+                            controller: question.optionControllers[optIndex],
+                            style: TextStyle(color: _primaryDark),
+                            decoration: InputDecoration(
+                              hintText: "create_option_hint".tr(),
+                              hintStyle:
+                                  TextStyle(color: _softGrey.withOpacity(0.5)),
+                              border: UnderlineInputBorder(
+                                  borderSide:
+                                      BorderSide(color: Colors.grey.shade200)),
+                              enabledBorder: UnderlineInputBorder(
+                                  borderSide:
+                                      BorderSide(color: Colors.grey.shade200)),
+                              focusedBorder: UnderlineInputBorder(
+                                  borderSide: BorderSide(color: _primaryDark)),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+
+                // Seçenek Ekle Butonu
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: () {
+                      setState(() {
+                        question.options.add('');
+                        question.optionControllers.add(TextEditingController());
+                      });
+                    },
+                    icon: const Icon(Icons.add_rounded, size: 18),
+                    label: Text("Add Option",
+                        style: const TextStyle(fontWeight: FontWeight.w600)),
+                    style: TextButton.styleFrom(
+                      foregroundColor: _primaryDark,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- UI: BOTTOM BAR (ALT AKSİYON ALANI) ---
+  Widget _buildBottomBar() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+      decoration: BoxDecoration(
+        color: _surfaceWhite,
+        border: Border(top: BorderSide(color: Colors.grey.shade100)),
+      ),
+      child: Row(
+        children: [
+          // Ayarlar Butonu (Sol)
+          InkWell(
+            onTap: _showSettingsSheet,
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                  color: _bgLight,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                      color: _selectedDuration != Duration.zero ||
+                              !_isNicknameRequired
+                          ? _primaryDark
+                          : Colors.transparent,
+                      width: 2)),
+              child: Icon(Icons.tune_rounded, color: _primaryDark),
+            ),
+          ),
+
+          const Spacer(),
+
+          // Soru Ekle Butonu (Orta - Floating)
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: _addNewQuestion,
+              borderRadius: BorderRadius.circular(50),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                decoration: BoxDecoration(
+                  color: _bgLight,
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.add_rounded, color: _primaryDark, size: 20),
+                    const SizedBox(width: 8),
+                    Text("Question",
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, color: _primaryDark)),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          const Spacer(),
+
+          // Oluştur Butonu (Sağ)
+          GestureDetector(
+            onTap: _isLoading ? null : _createEventAndNavigate,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+              decoration: BoxDecoration(
+                color: _primaryDark,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                      color: _primaryDark.withOpacity(0.3),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4))
                 ],
               ),
-              const SizedBox(height: 10),
-            ],
+              child: _isLoading
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                          color: Colors.white, strokeWidth: 2))
+                  : const Row(
+                      children: [
+                        Text("Create",
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold)),
+                        SizedBox(width: 8),
+                        Icon(Icons.arrow_forward_rounded,
+                            color: Colors.white, size: 18),
+                      ],
+                    ),
+            ),
           ),
-        );
-      },
-    );
-  }
-
-  Widget _buildDurationChip(String label, Duration duration) {
-    bool isSelected = _selectedDuration == duration;
-    return ActionChip(
-      label: Text(label),
-      labelStyle: TextStyle(
-        color: isSelected ? Colors.white : const Color(0xFF1A202C),
-        fontWeight: FontWeight.bold,
+        ],
       ),
-      backgroundColor:
-          isSelected ? Colors.blue.shade600 : const Color(0xFFE2E8F0),
-      onPressed: () {
-        setState(() {
-          _selectedDuration = duration;
-        });
-        Navigator.pop(context);
-      },
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: isSelected ? Colors.blue.shade600 : Colors.grey.shade300,
-        ),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
     );
-  }
-
-  String _formatDuration(Duration duration) {
-    if (duration == Duration.zero) {
-      return "time_indefinite".tr();
-    }
-    String twoDigits(int n) => n.toString().padLeft(2, '0');
-    final minutes = twoDigits(duration.inMinutes.remainder(60));
-    final seconds = twoDigits(duration.inSeconds.remainder(60));
-    return "$minutes:$seconds";
   }
 
   @override
   Widget build(BuildContext context) {
-    final consistentCardShadow = [
-      BoxShadow(
-          color: Colors.black.withAlpha(20),
-          blurRadius: 18,
-          offset: const Offset(0, 7)),
-    ];
-    const mainColor = Color(0xFF1A202C);
-
     return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: mainColor),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text("create_title".tr(),
-            style: const TextStyle(
-                fontWeight: FontWeight.bold, color: mainColor, fontSize: 21)),
-        centerTitle: true,
-      ),
-      body: Container(
-        width: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Color.fromARGB(192, 58, 142, 202),
-              Color.fromARGB(255, 219, 225, 232)
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        child: SafeArea(
-          child: ListView(
-            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10),
-            children: [
-              const SizedBox(height: 20),
-              Container(
-                margin: const EdgeInsets.only(bottom: 20),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color.fromARGB(230, 255, 255, 255),
-                  borderRadius: BorderRadius.circular(18),
-                  boxShadow: consistentCardShadow,
-                ),
-                child: TextField(
-                  controller: _eventTitleController,
-                  decoration: InputDecoration(
-                      hintText: "event_name_hint".tr(),
-                      border: InputBorder.none),
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
+      backgroundColor: _bgLight,
+      // Klavye açıldığında ekranın sıkışmasını önle
+      resizeToAvoidBottomInset: false,
+      body: SafeArea(
+        child: Column(
+          children: [
+            // 1. ÜST BAŞLIK ALANI
+            _buildHeader(),
+
+            // 2. KART ALANI (SAYFALAMA)
+            Expanded(
+              child: PageView.builder(
+                controller: _pageController,
+                itemCount: _questions.length,
+                onPageChanged: (index) => setState(() => _activeIndex = index),
+                itemBuilder: (context, index) {
+                  return _buildQuestionCard(index);
+                },
               ),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    ..._questions.asMap().entries.map((entry) {
-                      int index = entry.key;
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 10.0),
-                        child: GestureDetector(
-                          onTap: () => _saveAndSwitchTo(index),
-                          child: _buildTabButton(
-                              "${"create_question_tab_prefix".tr()}${index + 1}",
-                              isActive: _activeIndex == index),
-                        ),
-                      );
-                    }),
-                    _buildAddButton(() {
-                      _saveAndSwitchTo(_activeIndex);
-                      setState(() {
-                        _questions.add(QuestionModel(options: ['', '']));
-                        _saveAndSwitchTo(_questions.length - 1);
-                      });
-                    }),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-                decoration: BoxDecoration(
-                  color: const Color.fromARGB(230, 255, 255, 255),
-                  borderRadius: BorderRadius.circular(18),
-                  boxShadow: consistentCardShadow,
-                ),
-                child: TextField(
-                  controller: _questionController,
-                  decoration: InputDecoration(
-                      hintText: "create_question_hint".tr(),
-                      border: InputBorder.none),
-                  maxLines: 3,
-                ),
-              ),
-              const SizedBox(height: 18),
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4.0),
-                child: Text("create_options_title".tr(),
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 16,
-                        color: Color.fromARGB(255, 40, 43, 51))),
-              ),
-              ..._optionControllers.asMap().entries.map((entry) {
-                int index = entry.key;
-                TextEditingController controller = entry.value;
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: _buildOptionRow(
-                      '${index + 1}', "create_option_hint".tr(), controller),
-                );
-              }),
-              Center(
-                child: _buildAddButton(() {
-                  setState(() {
-                    _questions[_activeIndex].options.add('');
-                    _optionControllers.add(TextEditingController());
-                  });
-                }, isLarge: true),
-              ),
-              const SizedBox(height: 24),
-              Container(
-                decoration: BoxDecoration(
-                  color: const Color.fromARGB(230, 255, 255, 255),
-                  borderRadius: BorderRadius.circular(18),
-                  boxShadow: consistentCardShadow,
-                ),
-                child: SwitchListTile(
-                  title: Text(
-                    "create_nickname_required".tr(),
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, color: mainColor),
-                  ),
-                  value: _isNicknameRequired,
-                  onChanged: (bool value) {
-                    setState(() {
-                      _isNicknameRequired = value;
-                    });
-                  },
-                  activeColor: Colors.blue.shade600,
-                  contentPadding: const EdgeInsets.only(left: 16, right: 8),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Center(
-                child: GestureDetector(
-                  onTap: _isLoading ? null : _createEventAndNavigate,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        vertical: 18, horizontal: 28),
+            ),
+
+            // 3. SAYFA GÖSTERGESİ (NOKTALAR)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(_questions.length, (index) {
+                  return AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                    height: 6,
+                    width: _activeIndex == index ? 24 : 6,
                     decoration: BoxDecoration(
-                      color: _isLoading
-                          ? Colors.grey
-                          : const Color.fromARGB(255, 0, 135, 253),
-                      borderRadius: BorderRadius.circular(22),
-                      boxShadow: [
-                        BoxShadow(
-                            color: Colors.blue.withAlpha(40),
-                            blurRadius: 16,
-                            offset: const Offset(0, 5))
-                      ],
+                      color: _activeIndex == index
+                          ? _primaryDark
+                          : _softGrey.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(3),
                     ),
-                    child: _isLoading
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                                color: Colors.white, strokeWidth: 3))
-                        : Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.qr_code_2_rounded,
-                                  size: 30, color: Colors.white),
-                              const SizedBox(width: 14),
-                              Text("create_qr_button".tr(),
-                                  style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16))
-                            ],
-                          ),
-                  ),
-                ),
+                  );
+                }),
               ),
-              const SizedBox(height: 18),
-              Center(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    GestureDetector(
-                      onTap: () => _selectTime(context),
-                      child: Container(
-                        padding: const EdgeInsets.all(13),
-                        decoration: const BoxDecoration(
-                            color: mainColor, shape: BoxShape.circle),
-                        child: const Icon(Icons.timer_outlined,
-                            color: Colors.white),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 28, vertical: 13),
-                      decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(17),
-                          boxShadow: consistentCardShadow),
-                      child: Text(
-                        _formatDuration(_selectedDuration),
-                        style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: mainColor),
-                      ),
-                    )
-                  ],
-                ),
-              ),
-              const SizedBox(height: 10),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+            ),
 
-  Widget _buildTabButton(String text, {required bool isActive}) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 250),
-      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 13),
-      decoration: BoxDecoration(
-        color: isActive ? const Color(0xFF1A202C) : Colors.white,
-        borderRadius: BorderRadius.circular(17),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withAlpha(20),
-              blurRadius: 12,
-              offset: const Offset(0, 4))
-        ],
-      ),
-      child: Text(text,
-          style: TextStyle(
-              color: isActive ? Colors.white : const Color(0xFF4A5568),
-              fontWeight: FontWeight.bold,
-              fontSize: 15)),
-    );
-  }
-
-  Widget _buildAddButton(VoidCallback onTap, {bool isLarge = false}) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(100),
-      onTap: onTap,
-      child: Container(
-        width: isLarge ? 54 : 44,
-        height: isLarge ? 54 : 44,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-                color: Colors.black.withAlpha(23),
-                blurRadius: 12,
-                offset: const Offset(0, 4))
+            // 4. ALT AKSİYON BARI
+            // Klavye açıkken alt barı gizle veya yukarı taşı mantığı
+            Padding(
+              padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).viewInsets.bottom),
+              child: _buildBottomBar(),
+            ),
           ],
         ),
-        child: Icon(Icons.add,
-            color: const Color(0xFF4A5568), size: isLarge ? 29 : 22),
       ),
-    );
-  }
-
-  Widget _buildOptionRow(
-      String number, String hintText, TextEditingController controller) {
-    return Row(
-      children: [
-        Container(
-          width: 44,
-          height: 44,
-          decoration: const BoxDecoration(
-              color: Color(0xFF1A202C), shape: BoxShape.circle),
-          child: Center(
-              child: Text(number,
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 17))),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Container(
-            height: 50,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(15),
-              boxShadow: [
-                BoxShadow(
-                    color: Colors.black.withAlpha(20),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4))
-              ],
-            ),
-            child: TextField(
-              controller: controller,
-              decoration: InputDecoration(
-                hintText: hintText,
-                border: InputBorder.none,
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-              ),
-            ),
-          ),
-        ),
-      ],
     );
   }
 }
