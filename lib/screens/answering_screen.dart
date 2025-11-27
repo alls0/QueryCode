@@ -1,7 +1,8 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'thank_you_screen.dart';
-import 'package:easy_localization/easy_localization.dart'; // YENİ: Paketi import et
+import 'package:easy_localization/easy_localization.dart';
 
 class AnsweringScreen extends StatefulWidget {
   final String eventId;
@@ -25,10 +26,19 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
   String? _selectedAnswer;
   final List<Map<String, String>> _userAnswers = [];
 
+  final PageController _mediaPageController = PageController();
+  int _currentMediaIndex = 0;
+
   @override
   void initState() {
     super.initState();
     _fetchEventData();
+  }
+
+  @override
+  void dispose() {
+    _mediaPageController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchEventData() async {
@@ -98,12 +108,30 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
       setState(() {
         _currentQuestionIndex++;
         _selectedAnswer = null;
+        _currentMediaIndex = 0;
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final currentQuestion = !_isLoading && _questions.isNotEmpty
+        ? _questions[_currentQuestionIndex]
+        : null;
+
+    final List<dynamic> rawAttachments = currentQuestion != null
+        ? (currentQuestion['attachments'] as List<dynamic>? ?? [])
+        : [];
+
+    if (rawAttachments.isEmpty &&
+        currentQuestion != null &&
+        currentQuestion['attachmentPath'] != null) {
+      rawAttachments.add({
+        'path': currentQuestion['attachmentPath'],
+        'type': currentQuestion['attachmentType'] ?? 'image'
+      });
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: _isLoading
@@ -130,50 +158,176 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withAlpha(15),
-                              blurRadius: 20,
-                              offset: const Offset(0, 5),
-                            )
+                                color: Colors.black.withAlpha(15),
+                                blurRadius: 20,
+                                offset: const Offset(0, 5))
                           ],
                         ),
                         child: Text(
-                          _questions[_currentQuestionIndex]['questionText'] ??
-                              "answer_question_not_found".tr(),
+                          currentQuestion != null
+                              ? (currentQuestion['questionText'] ??
+                                  "answer_question_not_found".tr())
+                              : "",
                           textAlign: TextAlign.center,
                           style: const TextStyle(
                               fontSize: 22, fontWeight: FontWeight.bold),
                         ),
                       ),
-                      const SizedBox(height: 30),
-                      ...(_questions[_currentQuestionIndex]['options']
-                              as List<dynamic>)
-                          .map((option) {
-                        final bool isSelected = _selectedAnswer == option;
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 12.0),
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: isSelected
-                                  ? Colors.blue.shade600
-                                  : Colors.white,
-                              foregroundColor:
-                                  isSelected ? Colors.white : Colors.black,
-                              minimumSize: const Size(double.infinity, 60),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(18)),
-                              elevation: 4,
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                _selectedAnswer = option;
-                              });
-                            },
-                            child: Text(option,
-                                style: const TextStyle(
-                                    fontSize: 18, fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 20),
+                      if (rawAttachments.isNotEmpty) ...[
+                        Container(
+                          height: 300,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Colors.grey.shade200),
                           ),
-                        );
-                      }).toList(),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: Stack(
+                              alignment: Alignment.bottomCenter,
+                              children: [
+                                PageView.builder(
+                                  controller: _mediaPageController,
+                                  itemCount: rawAttachments.length,
+                                  onPageChanged: (idx) {
+                                    setState(() => _currentMediaIndex = idx);
+                                  },
+                                  itemBuilder: (context, idx) {
+                                    final attachment = rawAttachments[idx];
+                                    final path = attachment['path'].toString();
+                                    final type = attachment['type'];
+
+                                    // URL mi yoksa Yerel Dosya mı kontrolü
+                                    final bool isNetworkUrl =
+                                        path.startsWith('http');
+
+                                    if (type == 'image') {
+                                      if (isNetworkUrl) {
+                                        // İNTERNETTEN YÜKLE
+                                        return Image.network(
+                                          path,
+                                          fit: BoxFit.contain,
+                                          loadingBuilder: (context, child,
+                                              loadingProgress) {
+                                            if (loadingProgress == null)
+                                              return child;
+                                            return Center(
+                                                child: CircularProgressIndicator(
+                                                    value: loadingProgress
+                                                                .expectedTotalBytes !=
+                                                            null
+                                                        ? loadingProgress
+                                                                .cumulativeBytesLoaded /
+                                                            loadingProgress
+                                                                .expectedTotalBytes!
+                                                        : null));
+                                          },
+                                          errorBuilder:
+                                              (context, error, stackTrace) =>
+                                                  _buildErrorWidget(),
+                                        );
+                                      } else {
+                                        // YERELDEN YÜKLE (ESKİ TESTLER İÇİN)
+                                        return Image.file(
+                                          File(path),
+                                          fit: BoxFit.contain,
+                                          errorBuilder:
+                                              (context, error, stackTrace) =>
+                                                  _buildErrorWidget(),
+                                        );
+                                      }
+                                    } else {
+                                      return Center(
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                                Icons.insert_drive_file_rounded,
+                                                size: 60,
+                                                color: Colors.blue.shade300),
+                                            const SizedBox(height: 12),
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 20),
+                                              child: Text(
+                                                path
+                                                    .split('/')
+                                                    .last
+                                                    .split('?')
+                                                    .first, // URL parametrelerini temizle
+                                                textAlign: TextAlign.center,
+                                                style: const TextStyle(
+                                                    fontWeight:
+                                                        FontWeight.w600),
+                                              ),
+                                            )
+                                          ],
+                                        ),
+                                      );
+                                    }
+                                  },
+                                ),
+                                if (rawAttachments.length > 1)
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 12),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: List.generate(
+                                          rawAttachments.length, (idx) {
+                                        return Container(
+                                          margin: const EdgeInsets.symmetric(
+                                              horizontal: 4),
+                                          width: 8,
+                                          height: 8,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            color: _currentMediaIndex == idx
+                                                ? Colors.blue.shade700
+                                                : Colors.grey.shade400
+                                                    .withOpacity(0.5),
+                                          ),
+                                        );
+                                      }),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                      ],
+                      if (currentQuestion != null &&
+                          currentQuestion['options'] != null)
+                        ...((currentQuestion['options'] as List<dynamic>)
+                            .map((option) {
+                          final bool isSelected = _selectedAnswer == option;
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12.0),
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: isSelected
+                                    ? Colors.blue.shade600
+                                    : Colors.white,
+                                foregroundColor:
+                                    isSelected ? Colors.white : Colors.black,
+                                minimumSize: const Size(double.infinity, 60),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(18)),
+                                elevation: 4,
+                              ),
+                              onPressed: () =>
+                                  setState(() => _selectedAnswer = option),
+                              child: Text(option,
+                                  style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w600)),
+                            ),
+                          );
+                        }).toList()),
                       const Spacer(),
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
@@ -196,6 +350,18 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
                     ],
                   ),
                 ),
+    );
+  }
+
+  Widget _buildErrorWidget() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(Icons.broken_image_rounded, size: 40, color: Colors.grey.shade400),
+        const SizedBox(height: 8),
+        Text("Görsel yüklenemedi",
+            style: TextStyle(color: Colors.grey.shade500, fontSize: 14)),
+      ],
     );
   }
 }
