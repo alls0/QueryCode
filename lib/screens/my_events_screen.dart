@@ -12,25 +12,21 @@ class MyEventsScreen extends StatefulWidget {
 }
 
 class _MyEventsScreenState extends State<MyEventsScreen> {
+  // --- VERİ DEĞİŞKENLERİ ---
   List<DocumentSnapshot> _allEvents = [];
   List<DocumentSnapshot> _filteredEvents = [];
   List<String> _favoriteEventIds = [];
   bool _isLoading = true;
 
-  // Filtreleme Seçenekleri
+  // --- FİLTRE DEĞİŞKENLERİ ---
   bool _showOnlyFavorites = false;
-  bool _sortNewestFirst = true; // Varsayılan: Yeniden eskiye
+  bool _sortNewestFirst = true;
 
-  // --- TASARIM SABİTLERİ (mainTextColor hatasını çözmek için tekrar eklendi) ---
-  final Color _mainTextColor = const Color(0xFF1A202C); // Koyu Gri/Siyah
-  final List<BoxShadow> _cardShadow = [
-    BoxShadow(
-      color: Colors.black.withAlpha(15),
-      blurRadius: 16,
-      offset: const Offset(4, 7),
-    ),
-  ];
-  // ----------------------------------------------------------------------------
+  // --- MODERN TASARIM SABİTLERİ (QR RESULT İLE AYNI) ---
+  final Color _backgroundColor = const Color(0xFFF8FAFC);
+  final Color _primaryColor = const Color(0xFF2D3748);
+  final Color _secondaryColor = const Color(0xFF718096);
+  final Color _borderColor = const Color(0xFFE2E8F0);
 
   @override
   void initState() {
@@ -38,10 +34,9 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
     _loadData();
   }
 
+  // --- VERİ YÜKLEME ---
   Future<void> _loadData() async {
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     final prefs = await SharedPreferences.getInstance();
     final List<String> eventIds = prefs.getStringList('saved_events') ?? [];
@@ -78,6 +73,7 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
     }
   }
 
+  // --- FİLTRELEME MANTIĞI ---
   void _applyFilters() {
     List<DocumentSnapshot> tempEvents = List.from(_allEvents);
 
@@ -92,7 +88,6 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
           (a.data() as Map<String, dynamic>)['createdAt'] ?? Timestamp(0, 0);
       Timestamp timeB =
           (b.data() as Map<String, dynamic>)['createdAt'] ?? Timestamp(0, 0);
-
       return _sortNewestFirst ? timeB.compareTo(timeA) : timeA.compareTo(timeB);
     });
 
@@ -101,9 +96,9 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
     });
   }
 
+  // --- SİLME İŞLEMİ ---
   Future<void> _deleteEvent(String eventId) async {
     final prefs = await SharedPreferences.getInstance();
-
     List<String> savedEvents = prefs.getStringList('saved_events') ?? [];
     savedEvents.remove(eventId);
     await prefs.setStringList('saved_events', savedEvents);
@@ -120,7 +115,11 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("event_deleted".tr())),
+        SnackBar(
+          content: Text("event_deleted".tr(),
+              style: const TextStyle(color: Colors.white)),
+          backgroundColor: _primaryColor,
+        ),
       );
     }
   }
@@ -130,17 +129,20 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: Text("are_you_sure".tr(),
-              style: TextStyle(
-                  color: _mainTextColor, fontWeight: FontWeight.bold)),
-          content: Text("delete_confirm_text".tr()),
+              style:
+                  TextStyle(color: _primaryColor, fontWeight: FontWeight.bold)),
+          content: Text("delete_confirm_text".tr(),
+              style: TextStyle(color: _secondaryColor)),
           actions: <Widget>[
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: Text("cancel".tr(),
-                  style: const TextStyle(color: Colors.grey)),
+              child:
+                  Text("cancel".tr(), style: TextStyle(color: _secondaryColor)),
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(true),
@@ -158,9 +160,9 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
     }
   }
 
+  // --- FAVORİ İŞLEMİ ---
   Future<void> _toggleFavorite(String eventId) async {
     final prefs = await SharedPreferences.getInstance();
-
     setState(() {
       if (_favoriteEventIds.contains(eventId)) {
         _favoriteEventIds.remove(eventId);
@@ -169,11 +171,10 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
       }
       _applyFilters();
     });
-
     await prefs.setStringList('favorite_events', _favoriteEventIds);
   }
 
-  // --- GÜNCELLENMİŞ FİLTRE DİYALOĞU ---
+  // --- FİLTRE DİYALOĞU ---
   void _showFilterDialog() {
     showModalBottomSheet(
       context: context,
@@ -193,17 +194,19 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
                     style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        color: _mainTextColor)),
+                        color: _primaryColor)),
                 const SizedBox(height: 10),
-                const Divider(),
+                Divider(color: _borderColor),
 
                 // FAVORİ FİLTRESİ
                 SwitchListTile(
-                  activeColor: const Color(0xFF3182CE), // Ana mavi tonu
+                  activeColor: _primaryColor,
+                  contentPadding: EdgeInsets.zero,
                   title: Text("only_favorites".tr(),
                       style: TextStyle(
-                          fontWeight: FontWeight.w600, color: _mainTextColor)),
-                  secondary: const Icon(Icons.star, color: Colors.amber),
+                          fontWeight: FontWeight.w600, color: _primaryColor)),
+                  secondary: const Icon(Icons.star_rounded,
+                      color: Colors.amber, size: 28),
                   value: _showOnlyFavorites,
                   onChanged: (val) {
                     setModalState(() => _showOnlyFavorites = val);
@@ -214,30 +217,27 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
 
                 // SIRALAMA FİLTRESİ
                 ListTile(
+                  contentPadding: EdgeInsets.zero,
                   title: Text("sort_label".tr(),
                       style: TextStyle(
-                          fontWeight: FontWeight.w600, color: _mainTextColor)),
+                          fontWeight: FontWeight.w600, color: _primaryColor)),
                   leading: Icon(
                       _sortNewestFirst
-                          ? Icons.arrow_downward
-                          : Icons.arrow_upward,
-                      color: _mainTextColor),
+                          ? Icons.arrow_downward_rounded
+                          : Icons.arrow_upward_rounded,
+                      color: _primaryColor),
                   trailing: DropdownButton<bool>(
                     value: _sortNewestFirst,
                     underline: Container(),
-                    icon:
-                        Icon(Icons.keyboard_arrow_down, color: _mainTextColor),
+                    icon: Icon(Icons.keyboard_arrow_down_rounded,
+                        color: _primaryColor),
                     style: TextStyle(
-                        color: _mainTextColor, fontWeight: FontWeight.bold),
+                        color: _primaryColor, fontWeight: FontWeight.bold),
                     items: [
                       DropdownMenuItem(
-                          value: true,
-                          child: Text("sort_newest".tr(),
-                              style: TextStyle(color: _mainTextColor))),
+                          value: true, child: Text("sort_newest".tr())),
                       DropdownMenuItem(
-                          value: false,
-                          child: Text("sort_oldest".tr(),
-                              style: TextStyle(color: _mainTextColor))),
+                          value: false, child: Text("sort_oldest".tr())),
                     ],
                     onChanged: (val) {
                       if (val != null) {
@@ -247,7 +247,7 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
                     },
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 20),
               ],
             ),
           );
@@ -256,192 +256,273 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      extendBodyBehindAppBar: true, // Gradient'in yukarı kadar çıkması için
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        centerTitle: true,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: _mainTextColor),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text("events_title".tr(),
-            style:
-                TextStyle(color: _mainTextColor, fontWeight: FontWeight.bold)),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.filter_list, color: _mainTextColor),
-            onPressed: _showFilterDialog,
-            tooltip: "filter_sort_title".tr(),
+  // --- MODERN HEADER (QR Result Ekranındaki ile aynı stil) ---
+  Widget _buildHeader() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // 1. Geri Butonu
+          GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: _borderColor),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Icon(Icons.arrow_back_ios_new_rounded,
+                  size: 20, color: _primaryColor),
+            ),
+          ),
+
+          // 2. Başlık
+          Column(
+            children: [
+              Text(
+                "HISTORY",
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.5,
+                  color: _secondaryColor,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                "events_title".tr(),
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: _primaryColor,
+                ),
+              ),
+            ],
+          ),
+
+          // 3. Filtre Butonu (Sağda, Geri butonu ile aynı stilde)
+          GestureDetector(
+            onTap: _showFilterDialog,
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: _borderColor),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Icon(Icons.filter_list_rounded,
+                  size: 20, color: _primaryColor),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- ETKİNLİK KARTI ---
+  Widget _buildEventCard(DocumentSnapshot eventDoc, int index) {
+    final eventData = eventDoc.data() as Map<String, dynamic>;
+    final eventId = eventDoc.id;
+    final Timestamp timestamp = eventData['createdAt'] ?? Timestamp.now();
+    final date = timestamp.toDate();
+    final bool isFavorite = _favoriteEventIds.contains(eventId);
+    final String title =
+        eventData['eventTitle'] ?? "${"events_prefix".tr()}${index + 1}";
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _borderColor),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
           )
         ],
       ),
-      body: Container(
-        // --- GRADIENT ARKA PLAN ---
-        width: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Color.fromARGB(192, 58, 142, 202),
-              Color.fromARGB(255, 219, 225, 232)
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => QRResultScreen(eventId: eventId)),
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              children: [
+                // İkon
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEDF2F7), // Hafif gri arka plan
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(Icons.qr_code_2_rounded,
+                      color: _primaryColor, size: 24),
+                ),
+                const SizedBox(width: 16),
+
+                // Metinler
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: _primaryColor,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        "${date.day}/${date.month}/${date.year} • ${date.hour}:${date.minute.toString().padLeft(2, '0')}",
+                        style: TextStyle(
+                          color: _secondaryColor,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Aksiyonlar (Favori & Sil)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: Icon(
+                        isFavorite
+                            ? Icons.star_rounded
+                            : Icons.star_outline_rounded,
+                        color: isFavorite
+                            ? Colors.amber
+                            : _secondaryColor.withOpacity(0.5),
+                        size: 24,
+                      ),
+                      onPressed: () => _toggleFavorite(eventId),
+                    ),
+                    IconButton(
+                      icon: Icon(
+                        Icons.delete_outline_rounded,
+                        color: Colors.red.shade300,
+                        size: 22,
+                      ),
+                      onPressed: () => _confirmAndDelete(eventId),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
-        child: SafeArea(
-          child: _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : _filteredEvents.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(20),
-                            decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.5),
-                                shape: BoxShape.circle),
-                            child: Icon(Icons.event_busy,
-                                size: 64,
-                                color: _mainTextColor.withOpacity(0.5)),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: _backgroundColor,
+      body: SafeArea(
+        child: Column(
+          children: [
+            // 1. MODERN HEADER
+            _buildHeader(),
+
+            // 2. İÇERİK
+            Expanded(
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _filteredEvents.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.event_note_rounded,
+                                  size: 64, color: _borderColor),
+                              const SizedBox(height: 16),
+                              Text("events_no_events".tr(),
+                                  style: TextStyle(
+                                      color: _secondaryColor,
+                                      fontWeight: FontWeight.w600)),
+                              if (_showOnlyFavorites)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 8.0),
+                                  child: Text("no_favorites_hint".tr(),
+                                      style: TextStyle(
+                                          color:
+                                              _secondaryColor.withOpacity(0.6),
+                                          fontSize: 13)),
+                                ),
+                            ],
                           ),
-                          const SizedBox(height: 16),
-                          Text("events_no_events".tr(),
-                              style: TextStyle(
-                                  color: _mainTextColor,
-                                  fontWeight: FontWeight.w600)),
-                          if (_showOnlyFavorites)
-                            Text("no_favorites_hint".tr(),
-                                style: TextStyle(
-                                    color: _mainTextColor.withOpacity(0.6),
-                                    fontSize: 13)),
-                        ],
-                      ),
-                    )
-                  : Column(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 20.0, vertical: 10),
-                          child: Align(
-                            alignment: Alignment.centerRight,
-                            child: Container(
+                        )
+                      : Column(
+                          children: [
+                            // LİMİT BİLGİSİ
+                            Padding(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.6),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Text(
+                                  horizontal: 24, vertical: 8),
+                              child: Align(
+                                alignment: Alignment.centerRight,
+                                child: Text(
                                   "${_filteredEvents.length} / 15 ${"event_limit_label".tr()}",
                                   style: TextStyle(
-                                      color: _filteredEvents.length >= 15
-                                          ? Colors.red
-                                          : _mainTextColor,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold)),
+                                    color: _filteredEvents.length >= 15
+                                        ? Colors.red
+                                        : _secondaryColor,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
-                        Expanded(
-                          child: ListView.builder(
-                            padding: const EdgeInsets.symmetric(horizontal: 20),
-                            itemCount: _filteredEvents.length,
-                            itemBuilder: (context, index) {
-                              final eventDoc = _filteredEvents[index];
-                              final eventData =
-                                  eventDoc.data() as Map<String, dynamic>;
-                              final eventId = eventDoc.id;
-                              final Timestamp timestamp =
-                                  eventData['createdAt'] ?? Timestamp.now();
-                              final date = timestamp.toDate();
-                              final bool isFavorite =
-                                  _favoriteEventIds.contains(eventId);
 
-                              return Container(
-                                margin: const EdgeInsets.only(bottom: 16),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(18),
-                                  boxShadow: _cardShadow,
-                                ),
-                                child: ListTile(
-                                  contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 16, vertical: 8),
-                                  leading: Container(
-                                    padding: const EdgeInsets.all(10),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFF7FAFC),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: const Icon(Icons.qr_code_2,
-                                        color: Color(0xFF3182CE)),
-                                  ),
-                                  title: Text(
-                                    // YENİ: Başlık varsa onu göster, yoksa numarayı göster
-                                    eventData['eventTitle'] ??
-                                        "${"events_prefix".tr()}${index + 1}",
-                                    style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: _mainTextColor,
-                                        fontSize: 16),
-                                  ),
-                                  // --- GÜNCELLENMİŞ ALT BAŞLIK (SUBTITLE) ---
-                                  subtitle: Padding(
-                                    padding: const EdgeInsets.only(top: 4.0),
-                                    child: Text(
-                                      "${date.day}/${date.month}/${date.year} • ${date.hour}:${date.minute.toString().padLeft(2, '0')}",
-                                      style: TextStyle(
-                                          color: Colors.grey[600],
-                                          fontSize: 13),
-                                    ),
-                                  ),
-                                  // ------------------------------------------
-                                  trailing: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      IconButton(
-                                        icon: Icon(
-                                          isFavorite
-                                              ? Icons.star_rounded
-                                              : Icons.star_outline_rounded,
-                                          color: isFavorite
-                                              ? Colors.amber
-                                              : Colors.grey[400],
-                                          size: 28,
-                                        ),
-                                        onPressed: () =>
-                                            _toggleFavorite(eventId),
-                                      ),
-                                      IconButton(
-                                        icon: Icon(Icons.delete_outline_rounded,
-                                            color: Colors.red.shade400,
-                                            size: 24),
-                                        onPressed: () =>
-                                            _confirmAndDelete(eventId),
-                                      ),
-                                    ],
-                                  ),
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            QRResultScreen(eventId: eventId),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              );
-                            },
-                          ),
+                            // LİSTE
+                            Expanded(
+                              child: ListView.builder(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 20),
+                                itemCount: _filteredEvents.length,
+                                itemBuilder: (context, index) {
+                                  return _buildEventCard(
+                                      _filteredEvents[index], index);
+                                },
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
+            ),
+          ],
         ),
       ),
     );
