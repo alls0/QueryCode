@@ -6,10 +6,7 @@ import 'qr_result_screen.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
-// YENİ: Firebase Storage paketi
 import 'package:firebase_storage/firebase_storage.dart';
-// Dosya isimlerini almak için path kütüphanesini 'path_utils' takma adıyla ekliyoruz
-// Eğer path paketi yoksa pubspec.yaml'a 'path: ^1.8.3' ekleyebilirsiniz, ama genelde flutter içinde gelir.
 import 'package:path/path.dart' as path_utils;
 
 // --- MODEL ---
@@ -45,7 +42,7 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
   Duration _selectedDuration = Duration.zero;
   bool _isNicknameRequired = true;
   bool _isLoading = false;
-  String? _loadingStatus; // Yükleme durumu mesajı
+  String? _loadingStatus;
 
   final ImagePicker _picker = ImagePicker();
 
@@ -185,19 +182,15 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
   // --- LOGIC: FIREBASE STORAGE YÜKLEME ---
   Future<String> _uploadFileToStorage(String localPath) async {
     File file = File(localPath);
-    // Benzersiz bir dosya adı oluştur
     String fileName =
         "${DateTime.now().millisecondsSinceEpoch}_${path_utils.basename(localPath)}";
 
-    // Storage referansı: uploads/fileName
     Reference storageRef =
         FirebaseStorage.instance.ref().child('uploads/$fileName');
 
-    // Yükleme işlemi
     UploadTask uploadTask = storageRef.putFile(file);
     TaskSnapshot snapshot = await uploadTask;
 
-    // İndirme URL'ini al
     return await snapshot.ref.getDownloadURL();
   }
 
@@ -218,13 +211,10 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
         return;
       }
 
-      // 1. ADIM: Tüm soruları ve eklerini işle
       List<Map<String, dynamic>> processedQuestions = [];
 
       for (int i = 0; i < _questions.length; i++) {
         var q = _questions[i];
-
-        // Bu soruya ait eklerin listesi (URL'e dönüştürülmüş hali olacak)
         List<Map<String, String>> uploadedAttachments = [];
 
         for (int j = 0; j < q.attachments.length; j++) {
@@ -236,29 +226,27 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
             _loadingStatus = "Soru ${i + 1}, Dosya ${j + 1} yükleniyor...";
           });
 
-          // Dosyayı buluta yükle ve URL al
           try {
-            // Sadece 'file' veya 'image' tipindeyse ve yerel path ise yükle
             if (!localPath.startsWith('http')) {
               String downloadUrl = await _uploadFileToStorage(localPath);
-              uploadedAttachments.add({
-                'path': downloadUrl, // Artık yerel yol değil, http linki
-                'type': type
-              });
+              uploadedAttachments.add({'path': downloadUrl, 'type': type});
             } else {
-              // Zaten URL ise olduğu gibi ekle
               uploadedAttachments.add(attachment);
             }
           } catch (e) {
             debugPrint("Dosya yükleme hatası: $e");
-            // Hata olursa kullanıcıyı üzmemek için boş geçebiliriz veya hata mesajı gösterebiliriz
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content:
+                      Text("Yükleme hatası (Q${i + 1}): ${e.toString()}")));
+            }
           }
         }
 
         processedQuestions.add({
           'questionText': q.questionText,
           'options': q.options,
-          'attachments': uploadedAttachments, // URL'li liste
+          'attachments': uploadedAttachments,
         });
       }
 
@@ -271,7 +259,7 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
             : 'events_prefix'.tr() + (savedEvents.length + 1).toString(),
         'durationInSeconds': _selectedDuration.inSeconds,
         'isNicknameRequired': _isNicknameRequired,
-        'questions': processedQuestions, // Hazırladığımız veriyi kullan
+        'questions': processedQuestions,
         'results': {},
       };
 
@@ -307,7 +295,6 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
   }
 
   // --- UI PARÇALARI ---
-  // (Burada önemli bir değişiklik yok, sadece tasarım kodları)
 
   Widget _buildQuestionCard(int index) {
     final question = _questions[index];
@@ -529,7 +516,6 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
     );
   }
 
-  // --- Header, BottomBar, Settings... (Aynı) ---
   Widget _buildHeader() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
@@ -617,11 +603,16 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
                                 color: _primaryDark))
                       ])))),
           const Spacer(),
+          // --- GÜNCELLENEN KISIM (OVERFLOW ÇÖZÜMÜ) ---
           GestureDetector(
             onTap: _isLoading ? null : _createEventAndNavigate,
-            child: Container(
+            child: AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
                 padding:
                     const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                // Maksimum genişliği sınırla
+                constraints: BoxConstraints(
+                    maxWidth: MediaQuery.of(context).size.width * 0.45),
                 decoration: BoxDecoration(
                     color: _primaryDark,
                     borderRadius: BorderRadius.circular(14),
@@ -632,18 +623,28 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
                           offset: const Offset(0, 4))
                     ]),
                 child: _isLoading
-                    ? Row(children: [
-                        const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                                color: Colors.white, strokeWidth: 2)),
-                        const SizedBox(width: 10),
-                        Text(_loadingStatus ?? "",
-                            style: const TextStyle(
-                                color: Colors.white, fontSize: 10))
-                      ])
-                    : const Row(children: [
+                    ? Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                  color: Colors.white, strokeWidth: 2)),
+                          const SizedBox(width: 10),
+                          // Metin taşmasını önlemek için Flexible
+                          Flexible(
+                            child: Text(
+                              _loadingStatus ?? "...",
+                              style: const TextStyle(
+                                  color: Colors.white, fontSize: 10),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                            ),
+                          )
+                        ],
+                      )
+                    : const Row(mainAxisSize: MainAxisSize.min, children: [
                         Text("Create",
                             style: TextStyle(
                                 color: Colors.white,

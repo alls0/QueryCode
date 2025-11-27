@@ -123,6 +123,7 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
         ? (currentQuestion['attachments'] as List<dynamic>? ?? [])
         : [];
 
+    // Eski veri yapısı desteği
     if (rawAttachments.isEmpty &&
         currentQuestion != null &&
         currentQuestion['attachmentPath'] != null) {
@@ -196,40 +197,41 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
                                   },
                                   itemBuilder: (context, idx) {
                                     final attachment = rawAttachments[idx];
-                                    final path = attachment['path'].toString();
+                                    final path =
+                                        attachment['path']?.toString() ?? '';
                                     final type = attachment['type'];
 
-                                    // URL mi yoksa Yerel Dosya mı kontrolü
+                                    if (path.isEmpty)
+                                      return _buildErrorWidget();
+
                                     final bool isNetworkUrl =
                                         path.startsWith('http');
 
                                     if (type == 'image') {
                                       if (isNetworkUrl) {
-                                        // İNTERNETTEN YÜKLE
-                                        return Image.network(
-                                          path,
-                                          fit: BoxFit.contain,
-                                          loadingBuilder: (context, child,
-                                              loadingProgress) {
-                                            if (loadingProgress == null)
-                                              return child;
-                                            return Center(
-                                                child: CircularProgressIndicator(
-                                                    value: loadingProgress
-                                                                .expectedTotalBytes !=
-                                                            null
-                                                        ? loadingProgress
-                                                                .cumulativeBytesLoaded /
-                                                            loadingProgress
-                                                                .expectedTotalBytes!
-                                                        : null));
-                                          },
-                                          errorBuilder:
-                                              (context, error, stackTrace) =>
-                                                  _buildErrorWidget(),
-                                        );
+                                        return Image.network(path,
+                                            fit: BoxFit.contain, loadingBuilder:
+                                                (context, child,
+                                                    loadingProgress) {
+                                          if (loadingProgress == null)
+                                            return child;
+                                          return Center(
+                                              child: CircularProgressIndicator(
+                                                  value: loadingProgress
+                                                              .expectedTotalBytes !=
+                                                          null
+                                                      ? loadingProgress
+                                                              .cumulativeBytesLoaded /
+                                                          loadingProgress
+                                                              .expectedTotalBytes!
+                                                      : null));
+                                        }, errorBuilder:
+                                                (context, error, stackTrace) {
+                                          debugPrint(
+                                              "Resim yükleme hatası: $error");
+                                          return _buildErrorWidget();
+                                        });
                                       } else {
-                                        // YERELDEN YÜKLE (ESKİ TESTLER İÇİN)
                                         return Image.file(
                                           File(path),
                                           fit: BoxFit.contain,
@@ -257,7 +259,7 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
                                                     .split('/')
                                                     .last
                                                     .split('?')
-                                                    .first, // URL parametrelerini temizle
+                                                    .first,
                                                 textAlign: TextAlign.center,
                                                 style: const TextStyle(
                                                     fontWeight:
