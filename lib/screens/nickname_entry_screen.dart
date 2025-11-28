@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'answering_screen.dart';
-import 'package:easy_localization/easy_localization.dart'; // YENİ: Paketi import et
+import 'package:easy_localization/easy_localization.dart';
 
 class NicknameEntryScreen extends StatefulWidget {
   final String eventId;
@@ -14,6 +14,10 @@ class NicknameEntryScreen extends StatefulWidget {
 class _NicknameEntryScreenState extends State<NicknameEntryScreen> {
   final _nicknameController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+
+  // Tasarım Renkleri
+  final Color _primaryColor = const Color(0xFF1A202C);
+  final Color _bgColor = const Color(0xFFF8FAFC);
 
   @override
   void dispose() {
@@ -38,94 +42,102 @@ class _NicknameEntryScreenState extends State<NicknameEntryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    const Color accentColor = Color(0xFF2D3748);
-
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Color.fromARGB(192, 58, 142, 202),
-              Color.fromARGB(255, 219, 225, 232)
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-        child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 28),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Image.asset('assets/images/logo.png',
+      backgroundColor: _bgColor,
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 28),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 20,
+                            offset: const Offset(0, 10))
+                      ],
+                    ),
+                    child: Image.asset('assets/images/logo.png',
                         width: 80, height: 80),
-                    const SizedBox(height: 20),
-                    Text(
-                      "nickname_welcome".tr(),
+                  ),
+                  const SizedBox(height: 32),
+                  Text(
+                    "nickname_welcome".tr(),
+                    style: TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.w800,
+                      color: _primaryColor,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    "nickname_prompt".tr(),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+                  ),
+                  const SizedBox(height: 40),
+
+                  // Input Alanı
+                  TextFormField(
+                    controller: _nicknameController,
+                    cursorColor: _primaryColor,
+                    style: TextStyle(
+                        color: _primaryColor, fontWeight: FontWeight.w600),
+                    decoration: InputDecoration(
+                      hintText: "nickname_hint".tr(),
+                      filled: true,
+                      fillColor: Colors.white,
+                      prefixIcon: Icon(Icons.person_outline_rounded,
+                          color: Colors.grey.shade400),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(20),
+                          borderSide: BorderSide.none),
+                      enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(20),
+                          borderSide: BorderSide(color: Colors.grey.shade200)),
+                      focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(20),
+                          borderSide:
+                              BorderSide(color: _primaryColor, width: 1.5)),
+                      contentPadding: const EdgeInsets.symmetric(
+                          vertical: 20, horizontal: 20),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return "nickname_validation".tr();
+                      }
+                      return null;
+                    },
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Buton
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _primaryColor,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      minimumSize: const Size(double.infinity, 64),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20)),
+                    ),
+                    onPressed: _submitNickname,
+                    child: Text(
+                      "nickname_button".tr(),
                       style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: accentColor,
-                      ),
+                          fontSize: 18, fontWeight: FontWeight.bold),
                     ),
-                    const SizedBox(height: 10),
-                    Text(
-                      "nickname_prompt".tr(),
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 16, color: accentColor),
-                    ),
-                    const SizedBox(height: 30),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(18),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withAlpha(15),
-                            blurRadius: 16,
-                            offset: const Offset(4, 7),
-                          ),
-                        ],
-                      ),
-                      child: TextFormField(
-                        controller: _nicknameController,
-                        decoration: InputDecoration(
-                          hintText: "nickname_hint".tr(),
-                          prefixIcon: const Icon(Icons.person_outline),
-                          border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(
-                              vertical: 20, horizontal: 20),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return "nickname_validation".tr();
-                          }
-                          return null;
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: accentColor,
-                        foregroundColor: Colors.white,
-                        minimumSize: const Size(double.infinity, 60),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20)),
-                      ),
-                      onPressed: _submitNickname,
-                      child: Text(
-                        "nickname_button".tr(),
-                        style: const TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),

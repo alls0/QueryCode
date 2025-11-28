@@ -34,6 +34,11 @@ class CreateQuestionScreen extends StatefulWidget {
 }
 
 class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
+  // --- LİMİTLER ---
+  static const int _maxQuestions = 10;
+  static const int _maxOptions = 5;
+  static const int _maxAttachments = 3;
+
   late List<QuestionModel> _questions;
   late TextEditingController _eventTitleController;
   late PageController _pageController;
@@ -42,13 +47,15 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
   Duration _selectedDuration = Duration.zero;
   bool _isNicknameRequired = true;
   bool _isLoading = false;
-  String? _loadingStatus;
+  final String _loadingText =
+      "Oluşturuluyor..."; // Sadeleştirilmiş yükleme metni
 
   final ImagePicker _picker = ImagePicker();
 
+  // Tasarım Renkleri
   final Color _bgLight = const Color(0xFFF8FAFC);
-  final Color _primaryDark = const Color(0xFF2D3748);
-  final Color primaryDark = const Color(0xFF3182CE);
+  final Color _primaryDark = const Color(0xFF1A202C);
+  final Color _primaryBlue = const Color(0xFF3182CE);
   final Color _softGrey = const Color(0xFFA0AEC0);
   final Color _surfaceWhite = Colors.white;
 
@@ -75,6 +82,12 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
 
   // --- MEDYA İŞLEMLERİ ---
   Future<void> _pickImage(int index, ImageSource source) async {
+    // LİMİT KONTROLÜ
+    if (_questions[index].attachments.length >= _maxAttachments) {
+      _showWarning("Maksimum $_maxAttachments görsel ekleyebilirsiniz.");
+      return;
+    }
+
     try {
       final XFile? image = await _picker.pickImage(source: source);
       if (image != null) {
@@ -90,6 +103,12 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
   }
 
   Future<void> _pickFile(int index) async {
+    // LİMİT KONTROLÜ
+    if (_questions[index].attachments.length >= _maxAttachments) {
+      _showWarning("Maksimum $_maxAttachments dosya ekleyebilirsiniz.");
+      return;
+    }
+
     try {
       FilePickerResult? result = await FilePicker.platform.pickFiles();
       if (result != null && result.files.single.path != null) {
@@ -160,6 +179,12 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
   }
 
   void _addNewQuestion() {
+    // LİMİT KONTROLÜ
+    if (_questions.length >= _maxQuestions) {
+      _showWarning("En fazla $_maxQuestions soru oluşturabilirsiniz.");
+      return;
+    }
+
     _syncData();
     setState(() => _questions.add(QuestionModel(options: ['', ''])));
     Future.delayed(const Duration(milliseconds: 100), () {
@@ -198,7 +223,6 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
     _syncData();
     setState(() {
       _isLoading = true;
-      _loadingStatus = "Kontroller yapılıyor...";
     });
 
     try {
@@ -207,7 +231,7 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
           prefs.getStringList('saved_events') ?? [];
 
       if (savedEvents.length >= 15) {
-        if (mounted) _showError("memory_full".tr());
+        if (mounted) _showWarning("memory_full".tr());
         return;
       }
 
@@ -222,10 +246,6 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
           String localPath = attachment['path']!;
           String type = attachment['type']!;
 
-          setState(() {
-            _loadingStatus = "Soru ${i + 1}, Dosya ${j + 1} yükleniyor...";
-          });
-
           try {
             if (!localPath.startsWith('http')) {
               String downloadUrl = await _uploadFileToStorage(localPath);
@@ -236,9 +256,7 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
           } catch (e) {
             debugPrint("Dosya yükleme hatası: $e");
             if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content:
-                      Text("Yükleme hatası (Q${i + 1}): ${e.toString()}")));
+              _showWarning("Yükleme hatası (Q${i + 1}): ${e.toString()}");
             }
           }
         }
@@ -249,8 +267,6 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
           'attachments': uploadedAttachments,
         });
       }
-
-      setState(() => _loadingStatus = "Etkinlik kaydediliyor...");
 
       final eventData = {
         'createdAt': Timestamp.now(),
@@ -278,20 +294,23 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
         );
       }
     } catch (e) {
-      if (mounted) _showError("create_error".tr() + e.toString());
+      if (mounted) _showWarning("create_error".tr() + e.toString());
     } finally {
       if (mounted)
         setState(() {
           _isLoading = false;
-          _loadingStatus = null;
         });
     }
   }
 
-  void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message), backgroundColor: Colors.red));
-    setState(() => _isLoading = false);
+  void _showWarning(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))));
   }
 
   // --- UI PARÇALARI ---
@@ -419,6 +438,7 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
                     ),
                   ),
 
+                // Medya Ekle Butonu
                 InkWell(
                   onTap: () => _showAttachmentOptions(index),
                   borderRadius: BorderRadius.circular(12),
@@ -437,7 +457,10 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
                           Icon(Icons.add_photo_alternate_outlined,
                               color: _primaryDark, size: 20),
                           const SizedBox(width: 8),
-                          Text("Medya Ekle (${question.attachments.length})",
+                          Text(
+                              question.attachments.length >= _maxAttachments
+                                  ? "Limit Doldu (${question.attachments.length}/$_maxAttachments)"
+                                  : "Medya Ekle (${question.attachments.length}/$_maxAttachments)",
                               style: TextStyle(
                                   color: _primaryDark,
                                   fontWeight: FontWeight.w600))
@@ -494,6 +517,12 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
                     alignment: Alignment.centerLeft,
                     child: TextButton.icon(
                         onPressed: () {
+                          // LİMİT KONTROLÜ
+                          if (question.options.length >= _maxOptions) {
+                            _showWarning(
+                                "En fazla $_maxOptions seçenek ekleyebilirsiniz.");
+                            return;
+                          }
                           setState(() {
                             question.options.add('');
                             question.optionControllers
@@ -501,7 +530,8 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
                           });
                         },
                         icon: const Icon(Icons.add_rounded, size: 18),
-                        label: Text("Add Option",
+                        label: Text(
+                            "Seçenek Ekle (${question.options.length}/$_maxOptions)",
                             style:
                                 const TextStyle(fontWeight: FontWeight.w600)),
                         style: TextButton.styleFrom(
@@ -597,20 +627,18 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
                       child: Row(children: [
                         Icon(Icons.add_rounded, color: _primaryDark, size: 20),
                         const SizedBox(width: 8),
-                        Text("Question",
+                        Text("Soru (${_questions.length}/$_maxQuestions)",
                             style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 color: _primaryDark))
                       ])))),
           const Spacer(),
-          // --- GÜNCELLENEN KISIM (OVERFLOW ÇÖZÜMÜ) ---
           GestureDetector(
             onTap: _isLoading ? null : _createEventAndNavigate,
             child: AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
                 padding:
                     const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                // Maksimum genişliği sınırla
                 constraints: BoxConstraints(
                     maxWidth: MediaQuery.of(context).size.width * 0.45),
                 decoration: BoxDecoration(
@@ -625,6 +653,7 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
                 child: _isLoading
                     ? Row(
                         mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           const SizedBox(
                               width: 16,
@@ -632,12 +661,13 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
                               child: CircularProgressIndicator(
                                   color: Colors.white, strokeWidth: 2)),
                           const SizedBox(width: 10),
-                          // Metin taşmasını önlemek için Flexible
                           Flexible(
                             child: Text(
-                              _loadingStatus ?? "...",
+                              _loadingText,
                               style: const TextStyle(
-                                  color: Colors.white, fontSize: 10),
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600),
                               overflow: TextOverflow.ellipsis,
                               maxLines: 1,
                             ),
@@ -645,7 +675,7 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
                         ],
                       )
                     : const Row(mainAxisSize: MainAxisSize.min, children: [
-                        Text("Create",
+                        Text("Oluştur",
                             style: TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold)),
@@ -673,7 +703,7 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text("Settings",
+                      Text("Ayarlar",
                           style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
@@ -686,7 +716,7 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
                                   fontWeight: FontWeight.w600,
                                   color: _primaryDark)),
                           value: _isNicknameRequired,
-                          activeColor: primaryDark,
+                          activeColor: _primaryBlue,
                           onChanged: (val) {
                             setSheetState(() => _isNicknameRequired = val);
                             this.setState(() => _isNicknameRequired = val);

@@ -24,9 +24,13 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
   String? _selectedAnswer;
   final List<Map<String, String>> _userAnswers = [];
 
-  // Medya gösterimi için gerekli kontrolcüler
   final PageController _mediaPageController = PageController();
   int _currentMediaIndex = 0;
+
+  // Tasarım Sabitleri
+  final Color _primaryColor = const Color(0xFF1A202C);
+  final Color _bgColor = const Color(0xFFF8FAFC);
+  final Color _surfaceColor = Colors.white;
 
   @override
   void initState() {
@@ -37,7 +41,7 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
   @override
   void dispose() {
     _nicknameController.dispose();
-    _mediaPageController.dispose(); // Controller'ı temizlemeyi unutmuyoruz
+    _mediaPageController.dispose();
     super.dispose();
   }
 
@@ -120,7 +124,7 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
       setState(() {
         _currentQuestionIndex++;
         _selectedAnswer = null;
-        _currentMediaIndex = 0; // Yeni soruya geçince medya indeksini sıfırla
+        _currentMediaIndex = 0;
       });
     }
   }
@@ -128,17 +132,12 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFFB6E0FE), Color(0xFFF4F7FB)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        child: Center(
+      backgroundColor: _bgColor,
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
           child: _isLoading
-              ? const CircularProgressIndicator()
+              ? CircularProgressIndicator(color: _primaryColor)
               : _errorMessage.isNotEmpty
                   ? Text(_errorMessage,
                       style: const TextStyle(color: Colors.red, fontSize: 18))
@@ -158,14 +157,12 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
 
   Widget _buildNicknameStep() {
     return Container(
-      width: 400,
-      padding: const EdgeInsets.all(24),
+      width: 450,
+      padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 20)
-        ],
+        color: _surfaceColor,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.grey.shade200),
       ),
       child: Form(
         key: _formKey,
@@ -173,17 +170,32 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text("web_join_title".tr(),
-                style:
-                    const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 16),
-            Text("nickname_prompt".tr(), textAlign: TextAlign.center),
-            const SizedBox(height: 24),
+                style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w800,
+                    color: _primaryColor)),
+            const SizedBox(height: 12),
+            Text("nickname_prompt".tr(),
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey.shade600)),
+            const SizedBox(height: 32),
             TextFormField(
               controller: _nicknameController,
               decoration: InputDecoration(
                 labelText: "web_nickname_label".tr(),
-                border: const OutlineInputBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(12)),
+                filled: true,
+                fillColor: _bgColor,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(color: Colors.grey.shade200),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(color: _primaryColor),
                 ),
               ),
               validator: (value) {
@@ -193,12 +205,20 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
                 return null;
               },
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 32),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
+                  backgroundColor: _primaryColor,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16)),
                   minimumSize: const Size(double.infinity, 50)),
               onPressed: _submitNickname,
-              child: Text("nickname_button".tr()),
+              child: Text("nickname_button".tr(),
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.bold)),
             ),
           ],
         ),
@@ -207,36 +227,36 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
   }
 
   Widget _buildAnsweringStep() {
-    // Mevcut soruyu al
     final currentQuestion = _questions[_currentQuestionIndex];
-
-    // Ekleri (attachments) al ve listeye çevir, null kontrolü yap
     final List<dynamic> rawAttachments =
         currentQuestion['attachments'] as List<dynamic>? ?? [];
 
     return Container(
-      width: 400,
-      padding: const EdgeInsets.all(24),
+      width: 500,
+      padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 20)
-        ],
+        color: _surfaceColor,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.grey.shade200),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-              "${"answer_title_prefix".tr()}${_currentQuestionIndex + 1} / ${_questions.length}",
-              textAlign: TextAlign.center),
+              "${"answer_title_prefix".tr()} ${_currentQuestionIndex + 1}/${_questions.length}",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                  color: Colors.grey.shade500, fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
 
           Text(
             currentQuestion['questionText'] ?? "answer_question_not_found".tr(),
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                color: _primaryColor),
           ),
 
           const SizedBox(height: 24),
@@ -244,10 +264,10 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
           // --- MEDYA GÖSTERİMİ ---
           if (rawAttachments.isNotEmpty) ...[
             Container(
-              height: 250, // Web için uygun sabit yükseklik
+              height: 300,
               width: double.infinity,
               decoration: BoxDecoration(
-                color: Colors.grey.shade100,
+                color: _bgColor,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: Colors.grey.shade200),
               ),
@@ -268,7 +288,6 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
                         final type = attachment['type'];
 
                         if (type == 'image') {
-                          // Web'de network image kullanılır
                           return Image.network(
                             path,
                             fit: BoxFit.contain,
@@ -276,6 +295,7 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
                               if (loadingProgress == null) return child;
                               return Center(
                                 child: CircularProgressIndicator(
+                                  color: _primaryColor,
                                   value: loadingProgress.expectedTotalBytes !=
                                           null
                                       ? loadingProgress.cumulativeBytesLoaded /
@@ -292,13 +312,12 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
                             },
                           );
                         } else {
-                          // Dosya gösterimi
                           return Center(
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(Icons.insert_drive_file,
-                                    size: 50, color: Colors.blue),
+                                    size: 50, color: _primaryColor),
                                 const SizedBox(height: 8),
                                 Text(
                                   path.split('/').last.split('?').first,
@@ -312,7 +331,6 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
                         }
                       },
                     ),
-                    // Sayfa Göstergeleri (Dots)
                     if (rawAttachments.length > 1)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 12),
@@ -326,7 +344,7 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 color: _currentMediaIndex == idx
-                                    ? Colors.blue
+                                    ? _primaryColor
                                     : Colors.grey.withOpacity(0.5),
                               ),
                             );
@@ -339,29 +357,32 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
             ),
             const SizedBox(height: 24),
           ],
-          // --- MEDYA GÖSTERİMİ SONU ---
 
           ...(currentQuestion['options'] as List<dynamic>).map((option) {
             final bool isSelected = _selectedAnswer == option;
             return Padding(
-              padding: const EdgeInsets.only(bottom: 10.0),
-              child: OutlinedButton(
-                style: OutlinedButton.styleFrom(
-                  backgroundColor: isSelected ? Colors.blue.shade100 : null,
-                  minimumSize: const Size(double.infinity, 50),
-                  side: BorderSide(
-                      color: isSelected ? Colors.blue : Colors.grey.shade300),
-                ),
-                onPressed: () {
-                  setState(() {
-                    _selectedAnswer = option;
-                  });
-                },
-                child: Text(
-                  option,
-                  style: TextStyle(
-                      color:
-                          isSelected ? Colors.blue.shade900 : Colors.black87),
+              padding: const EdgeInsets.only(bottom: 12.0),
+              child: InkWell(
+                onTap: () => setState(() => _selectedAnswer = option),
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                  decoration: BoxDecoration(
+                    color: isSelected ? _primaryColor : _surfaceColor,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                        color:
+                            isSelected ? _primaryColor : Colors.grey.shade300,
+                        width: 1.5),
+                  ),
+                  child: Text(
+                    option,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: isSelected ? Colors.white : _primaryColor),
+                  ),
                 ),
               ),
             );
@@ -371,11 +392,20 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
 
           ElevatedButton(
             style: ElevatedButton.styleFrom(
+                backgroundColor: _primaryColor,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(vertical: 22),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16)),
                 minimumSize: const Size(double.infinity, 50)),
             onPressed: _selectedAnswer == null ? null : _submitAndGoToNext,
-            child: Text(_currentQuestionIndex < _questions.length - 1
-                ? "answer_next_button".tr()
-                : "answer_finish_button".tr()),
+            child: Text(
+                _currentQuestionIndex < _questions.length - 1
+                    ? "answer_next_button".tr()
+                    : "answer_finish_button".tr(),
+                style:
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           ),
         ],
       ),

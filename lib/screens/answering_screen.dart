@@ -29,6 +29,11 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
   final PageController _mediaPageController = PageController();
   int _currentMediaIndex = 0;
 
+  // Tasarım Renkleri
+  final Color _primaryColor = const Color(0xFF1A202C);
+  final Color _bgColor = const Color(0xFFF8FAFC);
+  final Color _surfaceColor = Colors.white;
+
   @override
   void initState() {
     super.initState();
@@ -134,35 +139,41 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
     }
 
     return Scaffold(
+      backgroundColor: _bgColor,
       appBar: AppBar(
+        backgroundColor: _bgColor,
+        elevation: 0,
+        centerTitle: true,
+        iconTheme: IconThemeData(color: _primaryColor),
         title: _isLoading
             ? null
             : Text(
-                "${"answer_title_prefix".tr()}${_currentQuestionIndex + 1} / ${_questions.length}"),
-        centerTitle: true,
+                "${"answer_title_prefix".tr()} ${_currentQuestionIndex + 1}/${_questions.length}",
+                style: TextStyle(
+                    color: _primaryColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16),
+              ),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(child: CircularProgressIndicator(color: _primaryColor))
           : _errorMessage.isNotEmpty
               ? Center(
                   child: Text(_errorMessage,
-                      style: const TextStyle(color: Colors.red, fontSize: 18)))
+                      style: const TextStyle(color: Colors.red, fontSize: 16)))
               : Padding(
-                  padding: const EdgeInsets.all(20.0),
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      const SizedBox(height: 10),
+                      // Soru Kartı
                       Container(
                         padding: const EdgeInsets.all(24),
                         decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                                color: Colors.black.withAlpha(15),
-                                blurRadius: 20,
-                                offset: const Offset(0, 5))
-                          ],
+                          color: _surfaceColor,
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(color: Colors.grey.shade200),
                         ),
                         child: Text(
                           currentQuestion != null
@@ -170,22 +181,26 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
                                   "answer_question_not_found".tr())
                               : "",
                           textAlign: TextAlign.center,
-                          style: const TextStyle(
-                              fontSize: 22, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: _primaryColor),
                         ),
                       ),
                       const SizedBox(height: 20),
+
+                      // Medya Alanı
                       if (rawAttachments.isNotEmpty) ...[
                         Container(
-                          height: 300,
+                          height: 250,
                           width: double.infinity,
                           decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
-                            borderRadius: BorderRadius.circular(16),
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
                             border: Border.all(color: Colors.grey.shade200),
                           ),
                           child: ClipRRect(
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius: BorderRadius.circular(20),
                             child: Stack(
                               alignment: Alignment.bottomCenter,
                               children: [
@@ -217,6 +232,7 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
                                             return child;
                                           return Center(
                                               child: CircularProgressIndicator(
+                                                  color: _primaryColor,
                                                   value: loadingProgress
                                                               .expectedTotalBytes !=
                                                           null
@@ -227,8 +243,6 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
                                                       : null));
                                         }, errorBuilder:
                                                 (context, error, stackTrace) {
-                                          debugPrint(
-                                              "Resim yükleme hatası: $error");
                                           return _buildErrorWidget();
                                         });
                                       } else {
@@ -247,8 +261,8 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
                                           children: [
                                             Icon(
                                                 Icons.insert_drive_file_rounded,
-                                                size: 60,
-                                                color: Colors.blue.shade300),
+                                                size: 50,
+                                                color: _primaryColor),
                                             const SizedBox(height: 12),
                                             Padding(
                                               padding:
@@ -288,9 +302,8 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
                                           decoration: BoxDecoration(
                                             shape: BoxShape.circle,
                                             color: _currentMediaIndex == idx
-                                                ? Colors.blue.shade700
-                                                : Colors.grey.shade400
-                                                    .withOpacity(0.5),
+                                                ? _primaryColor
+                                                : Colors.grey.shade300,
                                           ),
                                         );
                                       }),
@@ -302,53 +315,86 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
                         ),
                         const SizedBox(height: 20),
                       ],
-                      if (currentQuestion != null &&
-                          currentQuestion['options'] != null)
-                        ...((currentQuestion['options'] as List<dynamic>)
-                            .map((option) {
-                          final bool isSelected = _selectedAnswer == option;
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 12.0),
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: isSelected
-                                    ? Colors.blue.shade600
-                                    : Colors.white,
-                                foregroundColor:
-                                    isSelected ? Colors.white : Colors.black,
-                                minimumSize: const Size(double.infinity, 60),
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(18)),
-                                elevation: 4,
-                              ),
-                              onPressed: () =>
-                                  setState(() => _selectedAnswer = option),
-                              child: Text(option,
-                                  style: const TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w600)),
-                            ),
-                          );
-                        }).toList()),
-                      const Spacer(),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF1A202C),
-                          foregroundColor: Colors.white,
-                          minimumSize: const Size(double.infinity, 56),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(28)),
-                        ),
-                        onPressed:
-                            _selectedAnswer == null ? null : _submitAndGoToNext,
-                        child: Text(
-                          _currentQuestionIndex < _questions.length - 1
-                              ? "answer_next_button".tr()
-                              : "answer_finish_button".tr(),
-                          style: const TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.bold),
+
+                      // Seçenekler
+                      Expanded(
+                        child: SingleChildScrollView(
+                          child: Column(
+                            children: [
+                              if (currentQuestion != null &&
+                                  currentQuestion['options'] != null)
+                                ...((currentQuestion['options']
+                                        as List<dynamic>)
+                                    .map((option) {
+                                  final bool isSelected =
+                                      _selectedAnswer == option;
+                                  return Padding(
+                                    padding:
+                                        const EdgeInsets.only(bottom: 12.0),
+                                    child: InkWell(
+                                      onTap: () => setState(
+                                          () => _selectedAnswer = option),
+                                      borderRadius: BorderRadius.circular(16),
+                                      child: Container(
+                                        width: double.infinity,
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 18, horizontal: 16),
+                                        decoration: BoxDecoration(
+                                          color: isSelected
+                                              ? _primaryColor
+                                              : _surfaceColor,
+                                          borderRadius:
+                                              BorderRadius.circular(16),
+                                          border: Border.all(
+                                              color: isSelected
+                                                  ? _primaryColor
+                                                  : Colors.grey.shade300),
+                                        ),
+                                        child: Text(
+                                          option,
+                                          style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w600,
+                                              color: isSelected
+                                                  ? Colors.white
+                                                  : _primaryColor),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }).toList()),
+                            ],
+                          ),
                         ),
                       ),
+
+                      const SizedBox(height: 10),
+
+                      // İleri Butonu
+                      SafeArea(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _primaryColor,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(vertical: 20),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20)),
+                          ),
+                          onPressed: _selectedAnswer == null
+                              ? null
+                              : _submitAndGoToNext,
+                          child: Text(
+                            _currentQuestionIndex < _questions.length - 1
+                                ? "answer_next_button".tr()
+                                : "answer_finish_button".tr(),
+                            style: const TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
                     ],
                   ),
                 ),

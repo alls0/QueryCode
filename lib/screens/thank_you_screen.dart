@@ -1,53 +1,73 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:easy_localization/easy_localization.dart'; // YENİ: Paketi import et
+import 'package:easy_localization/easy_localization.dart';
 
 class ThankYouScreen extends StatelessWidget {
   const ThankYouScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    // Tasarım Renkleri
+    const Color primaryColor = Color(0xFF1A202C);
+    const Color bgColor = Color(0xFFF8FAFC);
+    const Color successColor = Color(0xFF38A169); // Yumuşak Yeşil
+
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: RadialGradient(
-            colors: [
-              const Color.fromARGB(255, 255, 255, 255).withOpacity(0.5),
-              const Color(0xFF00669B).withOpacity(0.6),
-            ],
-            center: Alignment.center,
-            radius: 1.0,
-          ),
-        ),
-        child: Center(
+      backgroundColor: bgColor,
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.check_circle, color: Colors.green, size: 100),
-              const SizedBox(height: 24),
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.grey.shade200),
+                  boxShadow: [
+                    BoxShadow(
+                        color: successColor.withOpacity(0.1),
+                        blurRadius: 20,
+                        spreadRadius: 5)
+                  ],
+                ),
+                child: const Icon(Icons.check_rounded,
+                    color: successColor, size: 64),
+              ),
+              const SizedBox(height: 32),
               Text(
                 "thanks_title".tr(),
-                style:
-                    const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                    color: primaryColor),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               Text(
                 "thanks_subtitle".tr(),
-                style: const TextStyle(fontSize: 16, color: Colors.black54),
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
               ),
-              const SizedBox(height: 40),
+              const SizedBox(height: 48),
               if (!kIsWeb)
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF1A202C),
+                    backgroundColor: primaryColor,
                     foregroundColor: Colors.white,
+                    elevation: 0,
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 40, vertical: 16),
+                        horizontal: 48, vertical: 20),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30)),
                   ),
                   onPressed: () {
                     Navigator.of(context).popUntil((route) => route.isFirst);
                   },
-                  child: Text("thanks_button_mobile".tr()),
+                  child: Text("thanks_button_mobile".tr(),
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
                 ),
             ],
           ),
