@@ -4,7 +4,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'answering_screen.dart';
 import 'nickname_entry_screen.dart';
-import 'dart:math' as math; // Animasyon için gerekli
+import 'dart:math' as math;
+import 'package:intl/intl.dart'; // Tarih formatı için eklendi
 
 class QrScannerScreen extends StatefulWidget {
   const QrScannerScreen({super.key});
@@ -28,7 +29,7 @@ class _QrScannerScreenState extends State<QrScannerScreen>
   @override
   void initState() {
     super.initState();
-    // Tarama çizgisi animasyonu için
+    // Tarama çizgisi animasyonu
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 3),
@@ -42,20 +43,26 @@ class _QrScannerScreenState extends State<QrScannerScreen>
     super.dispose();
   }
 
-  // --- TARAMA MANTIĞI (Sizin orijinal kodunuz korundu) ---
+  // --- TARAMA MANTIĞI (GÜNCELLENDİ) ---
   Future<void> handleScannedValue(String scannedValue) async {
     if (isScanCompleted) return;
     setState(() {
       isScanCompleted = true;
     });
 
-    const String targetUrl = 'https://querycode-app.web.app/event/';
+    // Web linkinize göre burayı düzenleyebilirsiniz
+    // Örn: https://querycode.web.app/event/ veya sadece /event/ kontrolü
+    const String targetBaseUrl = '/event/';
 
-    // Titreşim veya ses eklenebilir (isteğe bağlı)
-    // HapticFeedback.mediumImpact();
+    // Basit bir kontrol: URL içinde "/event/" geçiyor mu?
+    if (scannedValue.contains(targetBaseUrl)) {
+      // ID'yi ayıkla
+      final eventId = scannedValue.split(targetBaseUrl).last;
 
-    if (scannedValue.startsWith(targetUrl)) {
-      final eventId = scannedValue.substring(targetUrl.length);
+      if (eventId.isEmpty) {
+        _showError("Geçersiz QR kodu.");
+        return;
+      }
 
       // Bekleme dialog'u
       showDialog(
@@ -77,6 +84,31 @@ class _QrScannerScreenState extends State<QrScannerScreen>
 
         if (docSnapshot.exists) {
           final data = docSnapshot.data()!;
+
+          // --- YENİ EKLENEN TARİH KONTROLÜ BAŞLANGIÇ ---
+          final Timestamp? startTs = data['startTime'];
+          final Timestamp? endTs = data['endTime'];
+
+          if (startTs != null && endTs != null) {
+            final DateTime now = DateTime.now();
+            final DateTime start = startTs.toDate();
+            final DateTime end = endTs.toDate();
+            final DateFormat formatter = DateFormat('dd MMM HH:mm');
+
+            if (now.isBefore(start)) {
+              _showError(
+                  "Etkinlik henüz başlamadı.\nBaşlangıç: ${formatter.format(start)}");
+              return; // Fonksiyondan çık, yönlendirme yapma
+            }
+
+            if (now.isAfter(end)) {
+              _showError(
+                  "Etkinlik sona erdi.\nBitiş: ${formatter.format(end)}");
+              return; // Fonksiyondan çık, yönlendirme yapma
+            }
+          }
+          // --- TARİH KONTROLÜ BİTİŞ ---
+
           final bool isNicknameRequired = data['isNicknameRequired'] ?? false;
 
           Navigator.pushReplacement(
@@ -96,7 +128,7 @@ class _QrScannerScreenState extends State<QrScannerScreen>
         }
       } catch (e) {
         if (mounted) {
-          Navigator.pop(context); // Hata durumunda da dialog kapat
+          Navigator.pop(context);
           _showError("scanner_error_fetch".tr());
         }
       }
@@ -107,21 +139,31 @@ class _QrScannerScreenState extends State<QrScannerScreen>
 
   void _showError(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
+
+    // Hata mesajını göster
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Uyarı"),
         content: Text(message),
-        backgroundColor: Colors.redAccent,
-        behavior: SnackBarBehavior.floating,
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              // Kullanıcıyı tekrar tarama yapabilmesi için resetle
+              // veya ana ekrana dönmesini isteyebilirsin.
+              // Burada tekrar taramaya izin veriyoruz:
+              if (mounted) {
+                setState(() {
+                  isScanCompleted = false;
+                });
+              }
+            },
+            child: const Text("Tamam"),
+          )
+        ],
       ),
     );
-    // Hatalı tarama sonrası tekrar taramaya izin vermek için kısa bir gecikme
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        setState(() {
-          isScanCompleted = false;
-        });
-      }
-    });
   }
 
   @override
@@ -235,7 +277,7 @@ class _QrScannerScreenState extends State<QrScannerScreen>
                     ),
                   ),
                 ),
-                const SizedBox(width: 40), // Ortalama için boşluk
+                const SizedBox(width: 40),
               ],
             ),
           ),
@@ -307,7 +349,7 @@ class _QrScannerScreenState extends State<QrScannerScreen>
   }
 }
 
-// --- ÖZEL ÇİZİM SINIFI (SİYAH OVERLAY VE ORTA DELİK) ---
+// --- ÖZEL ÇİZİM SINIFI ---
 class ScannerOverlayPainter extends CustomPainter {
   final Rect scanWindow;
   final double borderRadius;
@@ -330,20 +372,16 @@ class ScannerOverlayPainter extends CustomPainter {
         ),
       );
 
-    // Arka planı çiz (ekran - kesik alan)
     final backgroundPaint = Paint()
-      ..color = Colors.black.withOpacity(0.7) // Karartma oranı
+      ..color = Colors.black.withOpacity(0.7)
       ..style = PaintingStyle.fill
       ..blendMode = BlendMode.srcOver;
 
-    // Kesme işlemi (dstOut kullanarak iç kısmı şeffaf yapıyoruz)
-    // Ancak daha basit bir yöntem: Path.combine
     final path =
         Path.combine(PathOperation.difference, backgroundPath, cutoutPath);
 
     canvas.drawPath(path, backgroundPaint);
 
-    // Çerçevenin kenarlarına beyaz çizgiler (Köşeler)
     final borderPaint = Paint()
       ..color = Colors.white
       ..style = PaintingStyle.stroke
@@ -351,7 +389,7 @@ class ScannerOverlayPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round;
 
     final cornerLength = 20.0;
-    // Sol Üst
+    // Köşe çizimleri (Aynen korundu)
     canvas.drawPath(
         Path()
           ..moveTo(scanWindow.left, scanWindow.top + cornerLength)
@@ -359,7 +397,6 @@ class ScannerOverlayPainter extends CustomPainter {
           ..lineTo(scanWindow.left + cornerLength, scanWindow.top),
         borderPaint);
 
-    // Sağ Üst
     canvas.drawPath(
         Path()
           ..moveTo(scanWindow.right - cornerLength, scanWindow.top)
@@ -367,7 +404,6 @@ class ScannerOverlayPainter extends CustomPainter {
           ..lineTo(scanWindow.right, scanWindow.top + cornerLength),
         borderPaint);
 
-    // Sol Alt
     canvas.drawPath(
         Path()
           ..moveTo(scanWindow.left, scanWindow.bottom - cornerLength)
@@ -375,7 +411,6 @@ class ScannerOverlayPainter extends CustomPainter {
           ..lineTo(scanWindow.left + cornerLength, scanWindow.bottom),
         borderPaint);
 
-    // Sağ Alt
     canvas.drawPath(
         Path()
           ..moveTo(scanWindow.right - cornerLength, scanWindow.bottom)

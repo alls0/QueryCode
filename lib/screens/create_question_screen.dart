@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-// SharedPreferences'ı kaldırdık
 import 'qr_result_screen.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:image_picker/image_picker.dart';
@@ -47,7 +46,12 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
   late PageController _pageController;
 
   int _activeIndex = 0;
-  Duration _selectedDuration = Duration.zero;
+
+  // --- TARİH VE SAAT DEĞİŞKENLERİ ---
+  DateTime _startDate = DateTime.now();
+  DateTime _endDate =
+      DateTime.now().add(const Duration(hours: 1)); // Varsayılan 1 saat sonra
+
   bool _isNicknameRequired = true;
   bool _isLoading = false;
   final String _loadingText = "Oluşturuluyor...";
@@ -65,7 +69,7 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
   void initState() {
     super.initState();
     _questions = [
-      QuestionModel(options: ['', ''])
+      QuestionModel(options: ['', '']) // Başlangıçta 2 boş seçenek
     ];
     _eventTitleController = TextEditingController();
     _pageController = PageController(viewportFraction: 0.92);
@@ -80,6 +84,59 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
       for (var o in q.optionControllers) o.dispose();
     }
     super.dispose();
+  }
+
+  // --- YARDIMCI: TARİH SEÇİCİ ---
+  Future<void> _pickDateTime(bool isStart) async {
+    final DateTime? date = await showDatePicker(
+      context: context,
+      initialDate: isStart ? _startDate : _endDate,
+      firstDate: DateTime.now().subtract(const Duration(days: 1)),
+      lastDate: DateTime(2100),
+      builder: (context, child) {
+        return Theme(
+          data: ThemeData.light().copyWith(
+            colorScheme: ColorScheme.light(primary: _primaryDark),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (date != null && mounted) {
+      final TimeOfDay? time = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.fromDateTime(isStart ? _startDate : _endDate),
+        builder: (context, child) {
+          return Theme(
+            data: ThemeData.light().copyWith(
+              colorScheme: ColorScheme.light(primary: _primaryDark),
+            ),
+            child: child!,
+          );
+        },
+      );
+
+      if (time != null) {
+        setState(() {
+          final newDateTime =
+              DateTime(date.year, date.month, date.day, time.hour, time.minute);
+
+          if (isStart) {
+            _startDate = newDateTime;
+            if (_startDate.isAfter(_endDate)) {
+              _endDate = _startDate.add(const Duration(hours: 1));
+            }
+          } else {
+            if (newDateTime.isAfter(_startDate)) {
+              _endDate = newDateTime;
+            } else {
+              _showWarning("Bitiş tarihi başlangıçtan sonra olmalıdır.");
+            }
+          }
+        });
+      }
+    }
   }
 
   // --- MEDYA İŞLEMLERİ ---
@@ -214,13 +271,10 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
 
   Future<void> _createEventAndNavigate() async {
     _syncData();
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     try {
       final user = FirebaseAuth.instance.currentUser;
-
       List<Map<String, dynamic>> processedQuestions = [];
 
       for (int i = 0; i < _questions.length; i++) {
@@ -241,9 +295,8 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
             }
           } catch (e) {
             debugPrint("Dosya yükleme hatası: $e");
-            if (mounted) {
+            if (mounted)
               _showWarning("Yükleme hatası (Q${i + 1}): ${e.toString()}");
-            }
           }
         }
 
@@ -257,12 +310,12 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
 
       final eventData = {
         'createdAt': Timestamp.now(),
-        // Eğer kullanıcı giriş yapmışsa ID'sini kaydet, yoksa null
-        'creatorId': user?.uid,
+        'creatorId': user?.uid, // Giriş yapmışsa ID, yoksa null (Misafir)
         'eventTitle': _eventTitleController.text.trim().isNotEmpty
             ? _eventTitleController.text.trim()
             : 'events_prefix'.tr(),
-        'durationInSeconds': _selectedDuration.inSeconds,
+        'startTime': Timestamp.fromDate(_startDate),
+        'endTime': Timestamp.fromDate(_endDate),
         'isNicknameRequired': _isNicknameRequired,
         'questions': processedQuestions,
         'results': {},
@@ -270,26 +323,18 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
 
       final docRef =
           await FirebaseFirestore.instance.collection('events').add(eventData);
-      final eventId = docRef.id;
-
-      // NOT: Burada SharedPreferences kodunu SİLDİM.
-      // Misafirler için kaydetmiyoruz (istemiyorsun).
-      // Üyeler için Firebase'den çekeceğiz.
 
       if (mounted) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-              builder: (context) => QRResultScreen(eventId: eventId)),
+              builder: (context) => QRResultScreen(eventId: docRef.id)),
         );
       }
     } catch (e) {
       if (mounted) _showWarning("create_error".tr() + e.toString());
     } finally {
-      if (mounted)
-        setState(() {
-          _isLoading = false;
-        });
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -303,7 +348,7 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))));
   }
 
-  // --- UI PARÇALARI (Aynı kaldı) ---
+  // --- UI PARÇALARI ---
   Widget _buildQuestionCard(int index) {
     final question = _questions[index];
     return Container(
@@ -449,8 +494,8 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
                           const SizedBox(width: 8),
                           Text(
                               question.attachments.length >= _maxAttachments
-                                  ? "Limit Doldu (${question.attachments.length}/$_maxAttachments)"
-                                  : "Medya Ekle (${question.attachments.length}/$_maxAttachments)",
+                                  ? "Limit Doldu"
+                                  : "Medya Ekle",
                               style: TextStyle(
                                   color: _primaryDark,
                                   fontWeight: FontWeight.w600))
@@ -459,7 +504,7 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
                 ),
                 const SizedBox(height: 24),
 
-                // SEÇENEKLER
+                // --- SEÇENEKLER ---
                 Text("create_options_title".tr(),
                     style: TextStyle(
                         color: _softGrey,
@@ -497,13 +542,27 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
                                     focusedBorder: UnderlineInputBorder(
                                         borderSide:
                                             BorderSide(color: _primaryDark))))),
+
+                        // SEÇENEK SİLME BUTONU
+                        if (question.optionControllers.length > 2)
+                          IconButton(
+                            icon: const Icon(Icons.close_rounded,
+                                color: Colors.grey, size: 20),
+                            onPressed: () {
+                              setState(() {
+                                question.options.removeAt(optIndex);
+                                question.optionControllers[optIndex].dispose();
+                                question.optionControllers.removeAt(optIndex);
+                              });
+                            },
+                          ),
                       ],
                     ),
                   );
                 }),
                 const SizedBox(height: 8),
 
-                // Seçenek Ekle
+                // --- SEÇENEK EKLE VE SAYAÇ ---
                 Align(
                     alignment: Alignment.centerLeft,
                     child: TextButton.icon(
@@ -521,7 +580,7 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
                         },
                         icon: const Icon(Icons.add_rounded, size: 18),
                         label: Text(
-                            "Seçenek Ekle (${question.options.length}/$_maxOptions)",
+                            "Seçenek Ekle (${question.options.length}/$_maxOptions)", // SAYAÇ EKLENDİ
                             style:
                                 const TextStyle(fontWeight: FontWeight.w600)),
                         style: TextButton.styleFrom(
@@ -550,38 +609,6 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
                     });
                   },
                 ),
-                if (question.allowOpenEnded)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8, bottom: 20),
-                    child: Row(
-                      children: [
-                        Container(
-                            width: 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                                border: Border.all(
-                                    color: _primaryDark.withOpacity(0.6),
-                                    width: 1.5),
-                                shape: BoxShape.circle)),
-                        const SizedBox(width: 12),
-                        Expanded(
-                            child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 12),
-                                decoration: BoxDecoration(
-                                    color: Colors.grey.shade50,
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                        color: Colors.grey.shade200)),
-                                child: Text(
-                                    "Diğer... (Katılımcı kendi cevabını yazar)",
-                                    style: TextStyle(
-                                        color: _softGrey,
-                                        fontStyle: FontStyle.italic,
-                                        fontSize: 13)))),
-                      ],
-                    ),
-                  ),
               ],
             ),
           ),
@@ -650,8 +677,7 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
                       color: _bgLight,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                          color: _selectedDuration != Duration.zero ||
-                                  !_isNicknameRequired
+                          color: _isNicknameRequired
                               ? _primaryDark
                               : Colors.transparent,
                           width: 2)),
@@ -699,25 +725,20 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
                         mainAxisSize: MainAxisSize.min,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                  color: Colors.white, strokeWidth: 2)),
-                          const SizedBox(width: 10),
-                          Flexible(
-                            child: Text(
-                              _loadingText,
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600),
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
-                            ),
-                          )
-                        ],
-                      )
+                            const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                    color: Colors.white, strokeWidth: 2)),
+                            const SizedBox(width: 10),
+                            Flexible(
+                                child: Text(_loadingText,
+                                    style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600),
+                                    overflow: TextOverflow.ellipsis))
+                          ])
                     : const Row(mainAxisSize: MainAxisSize.min, children: [
                         Text("Oluştur",
                             style: TextStyle(
@@ -740,9 +761,9 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
         shape: const RoundedRectangleBorder(
             borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
         builder: (BuildContext context) {
-          // HATA DÜZELTİLDİ: StatefulBuilder eklendi
           return StatefulBuilder(
             builder: (BuildContext context, StateSetter setSheetState) {
+              final dateFormat = DateFormat('dd MMM yyyy, HH:mm');
               return Padding(
                   padding: const EdgeInsets.all(24.0),
                   child: Column(
@@ -764,47 +785,52 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
                             value: _isNicknameRequired,
                             activeColor: _primaryBlue,
                             onChanged: (val) {
-                              // Hem modal'ın hem sayfanın durumunu güncelle
                               setSheetState(() => _isNicknameRequired = val);
                               this.setState(() => _isNicknameRequired = val);
                             }),
                         Divider(color: _bgLight, thickness: 2),
                         const SizedBox(height: 10),
-                        Text("create_timer_title".tr(),
+                        Text("Etkinlik Zamanı",
                             style: TextStyle(
                                 fontWeight: FontWeight.w600,
                                 color: _primaryDark)),
                         const SizedBox(height: 12),
-                        Wrap(spacing: 10, children: [
-                          _buildDurationChip("30s", const Duration(seconds: 30),
-                              setSheetState),
-                          _buildDurationChip(
-                              "1m", const Duration(minutes: 1), setSheetState),
-                          _buildDurationChip(
-                              "2m", const Duration(minutes: 2), setSheetState),
-                          _buildDurationChip("∞", Duration.zero, setSheetState)
-                        ]),
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: Icon(Icons.calendar_today_rounded,
+                              color: _primaryBlue),
+                          title: Text("Başlangıç",
+                              style: TextStyle(color: _softGrey, fontSize: 12)),
+                          subtitle: Text(dateFormat.format(_startDate),
+                              style: TextStyle(
+                                  color: _primaryDark,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16)),
+                          onTap: () async {
+                            await _pickDateTime(true);
+                            setSheetState(() {});
+                          },
+                        ),
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: Icon(Icons.event_busy_rounded,
+                              color: Colors.redAccent),
+                          title: Text("Bitiş",
+                              style: TextStyle(color: _softGrey, fontSize: 12)),
+                          subtitle: Text(dateFormat.format(_endDate),
+                              style: TextStyle(
+                                  color: _primaryDark,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16)),
+                          onTap: () async {
+                            await _pickDateTime(false);
+                            setSheetState(() {});
+                          },
+                        ),
                         const SizedBox(height: 20),
                       ]));
             },
           );
-        });
-  }
-
-  Widget _buildDurationChip(
-      String label, Duration duration, StateSetter setSheetState) {
-    bool isSelected = _selectedDuration == duration;
-    return ChoiceChip(
-        label: Text(label),
-        selected: isSelected,
-        selectedColor: _primaryDark,
-        labelStyle: TextStyle(color: isSelected ? Colors.white : _primaryDark),
-        backgroundColor: _bgLight,
-        side: BorderSide.none,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        onSelected: (bool selected) {
-          setSheetState(() => _selectedDuration = duration);
-          this.setState(() => _selectedDuration = duration);
         });
   }
 

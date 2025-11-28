@@ -25,7 +25,6 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
 
   int _currentQuestionIndex = 0;
 
-  // Cevap Yönetimi
   String? _selectedAnswer;
   final TextEditingController _otherAnswerController = TextEditingController();
   static const String _otherOptionKey = '__OTHER_OPTION_SELECTED__';
@@ -35,7 +34,6 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
   int _currentMediaIndex = 0;
   String? _deviceId;
 
-  // Tasarım Sabitleri
   final Color _primaryColor = const Color(0xFF1A202C);
   final Color _bgColor = const Color(0xFFF8FAFC);
   final Color _surfaceColor = Colors.white;
@@ -71,10 +69,39 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
 
       if (docSnapshot.exists) {
         final data = docSnapshot.data()!;
+
+        final Timestamp? startTs = data['startTime'];
+        final Timestamp? endTs = data['endTime'];
+
+        if (startTs != null && endTs != null) {
+          final DateTime now = DateTime.now();
+          final DateTime start = startTs.toDate();
+          final DateTime end = endTs.toDate();
+          final DateFormat formatter = DateFormat('dd MMM HH:mm');
+
+          if (now.isBefore(start)) {
+            setState(() {
+              _errorMessage =
+                  "Etkinlik henüz başlamadı.\nBaşlangıç: ${formatter.format(start)}";
+              _isLoading = false;
+            });
+            return;
+          }
+
+          if (now.isAfter(end)) {
+            setState(() {
+              _errorMessage =
+                  "Etkinlik sona erdi.\nBitiş: ${formatter.format(end)}";
+              _isLoading = false;
+            });
+            return;
+          }
+        }
+
         final List<dynamic> votedDevices = data['votedDevices'] ?? [];
         if (votedDevices.contains(_deviceId)) {
           setState(() {
-            _errorMessage = "You have already voted in this event.";
+            _errorMessage = "Bu etkinlikte daha önce oy kullandınız.";
             _isLoading = false;
           });
           return;
@@ -109,14 +136,13 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
   }
 
   void _submitAndGoToNext() async {
-    // Cevabı belirle
     String finalAnswer = _selectedAnswer == _otherOptionKey
         ? _otherAnswerController.text.trim()
         : _selectedAnswer!;
 
     if (finalAnswer.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please enter an answer.")),
+        const SnackBar(content: Text("Lütfen bir cevap girin.")),
       );
       return;
     }
@@ -127,7 +153,6 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
     });
 
     if (_currentQuestionIndex >= _questions.length - 1) {
-      // SON SORU: GÖNDERME
       setState(() => _isLoading = true);
 
       try {
@@ -165,7 +190,7 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
         if (mounted) {
           String errorMsg = "answer_error_submit".tr();
           if (e.toString().contains("Already voted"))
-            errorMsg = "You have already voted!";
+            errorMsg = "Daha önce oy kullandınız!";
 
           ScaffoldMessenger.of(context)
               .showSnackBar(SnackBar(content: Text(errorMsg)));
@@ -177,7 +202,6 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
         }
       }
     } else {
-      // SONRAKİ SORU
       setState(() {
         _currentQuestionIndex++;
         _selectedAnswer = null;
@@ -197,8 +221,22 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
           child: _isLoading
               ? CircularProgressIndicator(color: _primaryColor)
               : _errorMessage.isNotEmpty
-                  ? Text(_errorMessage,
-                      style: const TextStyle(color: Colors.red, fontSize: 18))
+                  ? Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.error_outline,
+                            size: 60, color: Colors.redAccent),
+                        const SizedBox(height: 16),
+                        Text(
+                          _errorMessage,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                              color: Colors.black87,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w500),
+                        ),
+                      ],
+                    )
                   : _buildCurrentStep(),
         ),
       ),
@@ -263,8 +301,6 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
     final List<dynamic> rawAttachments =
         currentQuestion['attachments'] as List<dynamic>? ?? [];
     List<dynamic> options = List.from(currentQuestion['options'] ?? []);
-
-    // Açık uçlu kontrolü
     final bool allowOpenEnded = currentQuestion['allowOpenEnded'] ?? false;
 
     return Container(
@@ -292,8 +328,6 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
                   fontWeight: FontWeight.w800,
                   color: _primaryColor)),
           const SizedBox(height: 24),
-
-          // Medya Alanı
           if (rawAttachments.isNotEmpty) ...[
             SizedBox(
               height: 300,
@@ -315,8 +349,6 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
             ),
             const SizedBox(height: 24),
           ],
-
-          // Seçenekler
           ...options.map((option) {
             final bool isSelected = _selectedAnswer == option;
             return Padding(
@@ -344,8 +376,6 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
               ),
             );
           }).toList(),
-
-          // Açık Uçlu Seçenek (Web için)
           if (allowOpenEnded)
             Column(
               children: [
@@ -391,7 +421,7 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
                   TextField(
                     controller: _otherAnswerController,
                     autofocus: true,
-                    maxLength: 20, // YENİ: Karakter sınırı eklendi
+                    maxLength: 20,
                     decoration: InputDecoration(
                       hintText: "Type your answer here...",
                       border: OutlineInputBorder(
@@ -405,7 +435,6 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
                 const SizedBox(height: 12),
               ],
             ),
-
           const SizedBox(height: 24),
           ElevatedButton(
             style: ElevatedButton.styleFrom(

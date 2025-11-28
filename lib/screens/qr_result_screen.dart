@@ -10,7 +10,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/services.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // EKLENDİ: Kimlik kontrolü için
+import 'package:firebase_auth/firebase_auth.dart';
 
 class QRResultScreen extends StatefulWidget {
   final String eventId;
@@ -39,21 +39,11 @@ class _QRResultScreenState extends State<QRResultScreen> {
     super.initState();
   }
 
-  @override
-  void dispose() {
-    super.dispose();
-  }
-
-  // --- YENİ EKLENEN: ÇIKIŞ KONTROL MANTIĞI ---
+  // --- ÇIKIŞ KONTROL MANTIĞI ---
   Future<bool> _onWillPop() async {
     final user = FirebaseAuth.instance.currentUser;
+    if (user != null) return true;
 
-    // 1. Durum: Kullanıcı giriş yapmışsa (Üye ise), uyarı vermeden çıkabilir.
-    if (user != null) {
-      return true;
-    }
-
-    // 2. Durum: Kullanıcı Misafir ise, uyarı ver.
     final shouldLeave = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -64,8 +54,7 @@ class _QRResultScreenState extends State<QRResultScreen> {
             Icon(Icons.warning_amber_rounded, color: Colors.orange.shade700),
             const SizedBox(width: 10),
             Text("attention".tr(),
-                style:
-                    const TextStyle(fontWeight: FontWeight.bold)), // "Dikkat"
+                style: const TextStyle(fontWeight: FontWeight.bold)),
           ],
         ),
         content: const Text(
@@ -74,12 +63,12 @@ class _QRResultScreenState extends State<QRResultScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(false), // Kal
+            onPressed: () => Navigator.of(context).pop(false),
             child:
                 Text("cancel".tr(), style: TextStyle(color: _secondaryColor)),
           ),
           ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true), // Çık
+            onPressed: () => Navigator.of(context).pop(true),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red.shade50,
               foregroundColor: Colors.red,
@@ -91,10 +80,8 @@ class _QRResultScreenState extends State<QRResultScreen> {
         ],
       ),
     );
-
     return shouldLeave ?? false;
   }
-  // ---------------------------------------------
 
   // --- İSTATİSTİK HESAPLAMA ---
   Map<String, dynamic> _calculateStatsLogic(
@@ -111,16 +98,11 @@ class _QRResultScreenState extends State<QRResultScreen> {
       final allowOpenEnded = question['allowOpenEnded'] as bool? ?? false;
 
       Map<String, int> optionCounts = {};
-
       final optionsList = (question['options'] as List<dynamic>? ?? []);
       for (var option in optionsList) {
         optionCounts[option.toString()] = 0;
       }
-
-      // Eğer açık uçlu varsa istatistik için 'Diğer' sayacı aç
-      if (allowOpenEnded) {
-        optionCounts["Diğer"] = 0;
-      }
+      if (allowOpenEnded) optionCounts["Diğer"] = 0;
 
       for (var respondentAnswers in results.values) {
         if (respondentAnswers is List) {
@@ -128,7 +110,6 @@ class _QRResultScreenState extends State<QRResultScreen> {
             if (answer is Map && answer['question'] == questionText) {
               final selectedOption = answer['answer'];
               if (selectedOption != null) {
-                // Seçeneklerde varsa onu artır, yoksa 'Diğer'i artır
                 if (optionCounts.containsKey(selectedOption)) {
                   optionCounts[selectedOption] =
                       optionCounts[selectedOption]! + 1;
@@ -144,21 +125,16 @@ class _QRResultScreenState extends State<QRResultScreen> {
 
       int totalVotesForQuestion =
           optionCounts.values.fold(0, (sum, count) => sum + count);
-
       Map<String, dynamic> finalStats = {};
       optionCounts.forEach((option, count) {
         double percent = totalVotesForQuestion == 0
             ? 0.0
             : (count / totalVotesForQuestion) * 100;
-
-        finalStats[option] = {
-          'count': count,
-          'percent': percent,
-        };
+        finalStats[option] = {'count': count, 'percent': percent};
       });
       stats[questionText] = {
         'totalVotes': totalVotesForQuestion,
-        'options': finalStats,
+        'options': finalStats
       };
     }
     return {'stats': stats, 'totalRespondents': totalRespondents};
@@ -180,7 +156,6 @@ class _QRResultScreenState extends State<QRResultScreen> {
         final directory = await getTemporaryDirectory();
         final imagePath = '${directory.path}/qr_code_${widget.eventId}.png';
         final file = await File(imagePath).writeAsBytes(pngBytes);
-
         await Share.shareXFiles([XFile(file.path)],
             text: "$eventTitle\n$link", subject: eventTitle);
       }
@@ -189,22 +164,104 @@ class _QRResultScreenState extends State<QRResultScreen> {
     }
   }
 
-  // --- LİNK KOPYALAMA ---
   Future<void> _copyLink(String link) async {
     await Clipboard.setData(ClipboardData(text: link));
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("link_copied".tr(),
-              style: const TextStyle(color: Colors.white)),
-          backgroundColor: _primaryColor,
-          duration: const Duration(seconds: 2),
-        ),
+            content: Text("link_copied".tr(),
+                style: const TextStyle(color: Colors.white)),
+            backgroundColor: _primaryColor,
+            duration: const Duration(seconds: 2)),
       );
     }
   }
 
-  // --- HEADER (GÜNCELLENDİ: GERİ BUTONU KONTROLÜ EKLENDİ) ---
+  // --- YENİ: ETKİNLİK ZAMAN BİLGİSİ KARTI ---
+  Widget _buildTimeInfoCard(Timestamp? startTs, Timestamp? endTs) {
+    if (startTs == null || endTs == null) return const SizedBox.shrink();
+
+    final start = startTs.toDate();
+    final end = endTs.toDate();
+    final now = DateTime.now();
+    final dateFormat = DateFormat('dd MMM HH:mm');
+
+    String statusText;
+    Color statusColor;
+    IconData statusIcon;
+
+    if (now.isBefore(start)) {
+      final diff = start.difference(now);
+      statusText =
+          "Başlamasına ${diff.inHours}sa ${diff.inMinutes % 60}dk kaldı";
+      statusColor = Colors.orange;
+      statusIcon = Icons.access_time_rounded;
+    } else if (now.isAfter(end)) {
+      statusText = "Etkinlik Sona Erdi";
+      statusColor = Colors.red;
+      statusIcon = Icons.event_busy_rounded;
+    } else {
+      final diff = end.difference(now);
+      statusText = "Bitişe ${diff.inHours}sa ${diff.inMinutes % 60}dk kaldı";
+      statusColor = Colors.green;
+      statusIcon = Icons.timer_rounded;
+    }
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: statusColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: statusColor.withOpacity(0.3)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(statusIcon, color: statusColor, size: 20),
+              const SizedBox(width: 8),
+              Text(statusText,
+                  style: TextStyle(
+                      color: statusColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text("Başlangıç",
+                      style: TextStyle(color: _secondaryColor, fontSize: 12)),
+                  Text(dateFormat.format(start),
+                      style: TextStyle(
+                          color: _primaryColor, fontWeight: FontWeight.w600)),
+                ],
+              ),
+              Icon(Icons.arrow_forward_rounded,
+                  color: _secondaryColor.withOpacity(0.5), size: 16),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text("Bitiş",
+                      style: TextStyle(color: _secondaryColor, fontSize: 12)),
+                  Text(dateFormat.format(end),
+                      style: TextStyle(
+                          color: _primaryColor, fontWeight: FontWeight.w600)),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildHeader(BuildContext context, String title) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
@@ -212,7 +269,6 @@ class _QRResultScreenState extends State<QRResultScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           GestureDetector(
-            // BURASI DEĞİŞTİ: Direkt pop yerine kontrol yapılıyor
             onTap: () async {
               if (await _onWillPop()) {
                 if (context.mounted) Navigator.pop(context);
@@ -226,43 +282,32 @@ class _QRResultScreenState extends State<QRResultScreen> {
                 border: Border.all(color: _borderColor),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
+                      color: Colors.black.withOpacity(0.04),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4))
                 ],
               ),
-              child: Icon(
-                  Icons
-                      .close_rounded, // İkonu çarpı yaptım, çıkış olduğu belli olsun diye
-                  size: 20,
-                  color: _primaryColor),
+              child: Icon(Icons.close_rounded, size: 20, color: _primaryColor),
             ),
           ),
           Expanded(
             child: Column(
               children: [
-                Text(
-                  "LIVE RESULTS",
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1.5,
-                    color: _secondaryColor,
-                  ),
-                ),
+                Text("LIVE RESULTS",
+                    style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1.5,
+                        color: _secondaryColor)),
                 const SizedBox(height: 4),
-                Text(
-                  title.isEmpty ? "Results" : title,
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: _primaryColor,
-                  ),
-                ),
+                Text(title.isEmpty ? "Results" : title,
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: _primaryColor)),
               ],
             ),
           ),
@@ -272,7 +317,6 @@ class _QRResultScreenState extends State<QRResultScreen> {
     );
   }
 
-  // --- GÖRÜNÜM SEÇİCİ ---
   Widget _buildViewSelector() {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
@@ -283,10 +327,9 @@ class _QRResultScreenState extends State<QRResultScreen> {
         border: Border.all(color: _borderColor),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 4))
         ],
       ),
       child: Row(
@@ -299,22 +342,19 @@ class _QRResultScreenState extends State<QRResultScreen> {
                 duration: const Duration(milliseconds: 200),
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 decoration: BoxDecoration(
-                  color: isSelected ? _primaryColor : Colors.transparent,
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                    color: isSelected ? _primaryColor : Colors.transparent,
+                    borderRadius: BorderRadius.circular(12)),
                 child: Text(
-                  mode == 'LIST'
-                      ? "List"
-                      : mode == 'STATS'
-                          ? "Stats"
-                          : "Chart",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                    color: isSelected ? Colors.white : _secondaryColor,
-                  ),
-                ),
+                    mode == 'LIST'
+                        ? "List"
+                        : mode == 'STATS'
+                            ? "Stats"
+                            : "Chart",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                        color: isSelected ? Colors.white : _secondaryColor)),
               ),
             ),
           );
@@ -323,10 +363,8 @@ class _QRResultScreenState extends State<QRResultScreen> {
     );
   }
 
-  // --- LİSTE GÖRÜNÜMÜ ---
   Widget _buildListView(Map<String, dynamic> results) {
     if (results.isEmpty) return _buildEmptyState();
-
     return ListView.separated(
       physics: const NeverScrollableScrollPhysics(),
       shrinkWrap: true,
@@ -336,42 +374,38 @@ class _QRResultScreenState extends State<QRResultScreen> {
       itemBuilder: (context, index) {
         final name = results.keys.elementAt(index);
         final answers = (results[name] as List<dynamic>? ?? []);
-
         return Container(
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: _borderColor),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.02),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              )
-            ],
-          ),
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: _borderColor),
+              boxShadow: [
+                BoxShadow(
+                    color: Colors.black.withOpacity(0.02),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2))
+              ]),
           child: ExpansionTile(
             shape: const Border(),
             collapsedIconColor: _secondaryColor,
             iconColor: _primaryColor,
             leading: CircleAvatar(
-              backgroundColor: const Color(0xFFEDF2F7),
-              child: Text(name.isNotEmpty ? name[0].toUpperCase() : "?",
-                  style: TextStyle(
-                      color: _primaryColor, fontWeight: FontWeight.bold)),
-            ),
+                backgroundColor: const Color(0xFFEDF2F7),
+                child: Text(name.isNotEmpty ? name[0].toUpperCase() : "?",
+                    style: TextStyle(
+                        color: _primaryColor, fontWeight: FontWeight.bold))),
             title: Text(name,
                 style: TextStyle(
                     fontWeight: FontWeight.w700, color: _primaryColor)),
             children: answers.map((a) {
               if (a is Map) {
                 return ListTile(
-                  title: Text(a['question']?.toString() ?? '',
-                      style: TextStyle(fontSize: 13, color: _secondaryColor)),
-                  trailing: Text(a['answer']?.toString() ?? '',
-                      style: TextStyle(
-                          fontWeight: FontWeight.w600, color: _primaryColor)),
-                );
+                    title: Text(a['question']?.toString() ?? '',
+                        style: TextStyle(fontSize: 13, color: _secondaryColor)),
+                    trailing: Text(a['answer']?.toString() ?? '',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: _primaryColor)));
               }
               return const SizedBox.shrink();
             }).toList(),
@@ -381,10 +415,8 @@ class _QRResultScreenState extends State<QRResultScreen> {
     );
   }
 
-  // --- İSTATİSTİK GÖRÜNÜMÜ ---
   Widget _buildStatsView(Map<String, dynamic> stats) {
     if (stats.isEmpty) return _buildEmptyState();
-
     return ListView(
       physics: const NeverScrollableScrollPhysics(),
       shrinkWrap: true,
@@ -401,36 +433,32 @@ class _QRResultScreenState extends State<QRResultScreen> {
           margin: const EdgeInsets.only(bottom: 16),
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: _borderColor),
-            boxShadow: [
-              BoxShadow(
-                  color: Colors.black.withOpacity(0.02),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2))
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(question,
-                  style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: _primaryColor)),
-              const SizedBox(height: 20),
-              ...options.entries.map((opt) {
-                final optValue = opt.value as Map<dynamic, dynamic>? ?? {};
-                final rawPercent =
-                    (optValue['percent'] as num?)?.toDouble() ?? 0.0;
-                final percent = (rawPercent / 100).clamp(0.0, 1.0);
-
-                return Padding(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: _borderColor),
+              boxShadow: [
+                BoxShadow(
+                    color: Colors.black.withOpacity(0.02),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2))
+              ]),
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(question,
+                style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: _primaryColor)),
+            const SizedBox(height: 20),
+            ...options.entries.map((opt) {
+              final optValue = opt.value as Map<dynamic, dynamic>? ?? {};
+              final rawPercent =
+                  (optValue['percent'] as num?)?.toDouble() ?? 0.0;
+              final percent = (rawPercent / 100).clamp(0.0, 1.0);
+              return Padding(
                   padding: const EdgeInsets.only(bottom: 16),
-                  child: Column(
-                    children: [
-                      Row(
+                  child: Column(children: [
+                    Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Flexible(
@@ -441,49 +469,37 @@ class _QRResultScreenState extends State<QRResultScreen> {
                           Text("${(percent * 100).toStringAsFixed(0)}%",
                               style: TextStyle(
                                   color: _primaryColor,
-                                  fontWeight: FontWeight.bold)),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      ClipRRect(
+                                  fontWeight: FontWeight.bold))
+                        ]),
+                    const SizedBox(height: 8),
+                    ClipRRect(
                         borderRadius: BorderRadius.circular(4),
                         child: LinearProgressIndicator(
-                          value: percent.isNaN ? 0.0 : percent,
-                          minHeight: 8,
-                          backgroundColor: const Color(0xFFEDF2F7),
-                          valueColor: AlwaysStoppedAnimation(_primaryColor),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }),
-              Divider(height: 32, color: _borderColor),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text("total_responses".tr(),
-                      style: TextStyle(color: _secondaryColor, fontSize: 14)),
-                  Text("$questionTotalVotes",
-                      style: TextStyle(
-                          color: _primaryColor,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold)),
-                ],
-              )
-            ],
-          ),
+                            value: percent.isNaN ? 0.0 : percent,
+                            minHeight: 8,
+                            backgroundColor: const Color(0xFFEDF2F7),
+                            valueColor: AlwaysStoppedAnimation(_primaryColor))),
+                  ]));
+            }),
+            Divider(height: 32, color: _borderColor),
+            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+              Text("total_responses".tr(),
+                  style: TextStyle(color: _secondaryColor, fontSize: 14)),
+              Text("$questionTotalVotes",
+                  style: TextStyle(
+                      color: _primaryColor,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold))
+            ])
+          ]),
         );
       }).toList(),
     );
   }
 
-  // --- GRAFİK GÖRÜNÜMÜ ---
   Widget _buildChartView(Map<String, dynamic> stats) {
     if (stats.isEmpty) return _buildEmptyState();
-
     final keys = stats.keys.toList();
-
     return ListView.separated(
       physics: const NeverScrollableScrollPhysics(),
       shrinkWrap: true,
@@ -496,163 +512,133 @@ class _QRResultScreenState extends State<QRResultScreen> {
         final options =
             Map<String, dynamic>.from(entryValue['options'] as Map? ?? {});
         final totalVotes = (entryValue['totalVotes'] as num?)?.toInt() ?? 0;
-
         int maxVote = 0;
         options.forEach((_, val) {
-          final valMap = val as Map<dynamic, dynamic>? ?? {};
-          final c = (valMap['count'] as num?)?.toInt() ?? 0;
+          final c = ((val as Map)['count'] as num?)?.toInt() ?? 0;
           if (c > maxVote) maxVote = c;
         });
         final double maxY = (maxVote == 0 ? 5 : maxVote * 1.2).toDouble();
-
         final barGroups = options.entries.toList().asMap().entries.map((e) {
-          final valMap = e.value.value as Map<dynamic, dynamic>? ?? {};
-          final count = (valMap['count'] as num?)?.toInt() ?? 0;
-
-          return BarChartGroupData(
-            x: e.key,
-            barRods: [
-              BarChartRodData(
+          final count = ((e.value.value as Map)['count'] as num?)?.toInt() ?? 0;
+          return BarChartGroupData(x: e.key, barRods: [
+            BarChartRodData(
                 toY: count.toDouble(),
                 color: _primaryColor,
                 width: 22,
                 borderRadius:
                     const BorderRadius.vertical(top: Radius.circular(4)),
                 backDrawRodData: BackgroundBarChartRodData(
-                  show: true,
-                  toY: maxY,
-                  color: Colors.grey.withOpacity(0.05),
-                ),
-              )
-            ],
-          );
+                    show: true,
+                    toY: maxY,
+                    color: Colors.grey.withOpacity(0.05)))
+          ]);
         }).toList();
 
         return Container(
           height: 350,
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: _borderColor),
-            boxShadow: [
-              BoxShadow(
-                  color: Colors.black.withOpacity(0.03),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2))
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                question,
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: _borderColor),
+              boxShadow: [
+                BoxShadow(
+                    color: Colors.black.withOpacity(0.03),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2))
+              ]),
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(question,
                 style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
                     color: _primaryColor),
                 maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 24),
-              Expanded(
-                child: BarChart(
-                  BarChartData(
+                overflow: TextOverflow.ellipsis),
+            const SizedBox(height: 24),
+            Expanded(
+                child: BarChart(BarChartData(
                     maxY: maxY,
                     barGroups: barGroups,
                     gridData: FlGridData(
-                      show: true,
-                      drawVerticalLine: false,
-                      getDrawingHorizontalLine: (value) => FlLine(
-                        color: _borderColor.withOpacity(0.5),
-                        strokeWidth: 1,
-                        dashArray: [5, 5],
-                      ),
-                    ),
+                        show: true,
+                        drawVerticalLine: false,
+                        getDrawingHorizontalLine: (value) => FlLine(
+                            color: _borderColor.withOpacity(0.5),
+                            strokeWidth: 1,
+                            dashArray: [5, 5])),
                     borderData: FlBorderData(show: false),
                     titlesData: FlTitlesData(
-                      topTitles: const AxisTitles(
-                          sideTitles: SideTitles(showTitles: false)),
-                      rightTitles: const AxisTitles(
-                          sideTitles: SideTitles(showTitles: false)),
-                      leftTitles: const AxisTitles(
-                          sideTitles: SideTitles(showTitles: false)),
-                      bottomTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                        showTitles: true,
-                        getTitlesWidget: (val, meta) {
-                          if (val < 0 || val.toInt() >= options.length) {
-                            return const SizedBox();
-                          }
-                          final text = options.keys.elementAt(val.toInt());
-                          return Padding(
-                            padding: const EdgeInsets.only(top: 12.0),
-                            child: Text(
-                              text.length > 8
-                                  ? "${text.substring(0, 8)}.."
-                                  : text,
-                              style: TextStyle(
-                                  fontSize: 11, color: _secondaryColor),
-                            ),
-                          );
-                        },
-                        reservedSize: 30,
-                      )),
-                    ),
+                        topTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false)),
+                        rightTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false)),
+                        leftTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false)),
+                        bottomTitles: AxisTitles(
+                            sideTitles: SideTitles(
+                                showTitles: true,
+                                getTitlesWidget: (val, meta) {
+                                  if (val < 0 || val.toInt() >= options.length)
+                                    return const SizedBox();
+                                  final text =
+                                      options.keys.elementAt(val.toInt());
+                                  return Padding(
+                                      padding: const EdgeInsets.only(top: 12.0),
+                                      child: Text(
+                                          text.length > 8
+                                              ? "${text.substring(0, 8)}.."
+                                              : text,
+                                          style: TextStyle(
+                                              fontSize: 11,
+                                              color: _secondaryColor)));
+                                },
+                                reservedSize: 30))),
                     barTouchData: BarTouchData(
-                      touchTooltipData: BarTouchTooltipData(
-                        getTooltipColor: (_) => Colors.white,
-                        tooltipBorder: BorderSide(color: _borderColor),
-                        tooltipPadding: const EdgeInsets.all(8),
-                        tooltipMargin: 8,
-                        getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                          if (group.x < 0 || group.x >= options.length) {
-                            return null;
-                          }
-                          final optionName = options.keys.elementAt(group.x);
-                          return BarTooltipItem(
-                            '$optionName\n',
-                            TextStyle(
-                                color: _secondaryColor,
-                                fontWeight: FontWeight.w500,
-                                fontSize: 12),
-                            children: <TextSpan>[
-                              TextSpan(
-                                text: '${rod.toY.toInt()} Votes',
-                                style: TextStyle(
-                                    color: _primaryColor,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold),
-                              ),
-                            ],
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              Container(
+                        touchTooltipData: BarTouchTooltipData(
+                            getTooltipColor: (_) => Colors.white,
+                            tooltipBorder: BorderSide(color: _borderColor),
+                            tooltipPadding: const EdgeInsets.all(8),
+                            tooltipMargin: 8,
+                            getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                              if (group.x < 0 || group.x >= options.length)
+                                return null;
+                              final optionName =
+                                  options.keys.elementAt(group.x);
+                              return BarTooltipItem(
+                                  '$optionName\n',
+                                  TextStyle(
+                                      color: _secondaryColor,
+                                      fontWeight: FontWeight.w500,
+                                      fontSize: 12),
+                                  children: <TextSpan>[
+                                    TextSpan(
+                                        text: '${rod.toY.toInt()} Votes',
+                                        style: TextStyle(
+                                            color: _primaryColor,
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold))
+                                  ]);
+                            }))))),
+            Container(
                 margin: const EdgeInsets.only(top: 24),
                 padding: const EdgeInsets.only(top: 16),
                 decoration: BoxDecoration(
-                  border: Border(top: BorderSide(color: _borderColor)),
-                ),
+                    border: Border(top: BorderSide(color: _borderColor))),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text("total_responses".tr(),
-                        style: TextStyle(color: _secondaryColor, fontSize: 14)),
-                    Text("$totalVotes",
-                        style: TextStyle(
-                            color: _primaryColor,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold)),
-                  ],
-                ),
-              ),
-            ],
-          ),
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text("total_responses".tr(),
+                          style:
+                              TextStyle(color: _secondaryColor, fontSize: 14)),
+                      Text("$totalVotes",
+                          style: TextStyle(
+                              color: _primaryColor,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold))
+                    ]))
+          ]),
         );
       },
     );
@@ -660,25 +646,20 @@ class _QRResultScreenState extends State<QRResultScreen> {
 
   Widget _buildEmptyState() {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.bar_chart_rounded, size: 65, color: Colors.grey.shade300),
-          const SizedBox(height: 16),
-          Text("No Data Yet", style: TextStyle(color: Colors.grey.shade400)),
-        ],
-      ),
-    );
+        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+      Icon(Icons.bar_chart_rounded, size: 65, color: Colors.grey.shade300),
+      const SizedBox(height: 16),
+      Text("No Data Yet", style: TextStyle(color: Colors.grey.shade400))
+    ]));
   }
 
   @override
   Widget build(BuildContext context) {
     final eventRef =
         FirebaseFirestore.instance.collection('events').doc(widget.eventId);
-    final qrData =
-        'https://querycode-app.web.app/event/${widget.eventId}'; // Kendi web linkine göre ayarla
+    // URL'yi kendi web linkinize göre düzenleyin
+    final qrData = 'https://querycode.web.app/event/${widget.eventId}';
 
-    // GÜNCELLENDİ: WillPopScope ile tüm sayfayı sarmaladık
     return WillPopScope(
       onWillPop: _onWillPop,
       child: Scaffold(
@@ -687,21 +668,22 @@ class _QRResultScreenState extends State<QRResultScreen> {
           child: StreamBuilder<DocumentSnapshot>(
             stream: eventRef.snapshots(),
             builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
+              if (snapshot.connectionState == ConnectionState.waiting)
                 return const Center(child: CircularProgressIndicator());
-              }
-
-              if (!snapshot.hasData || !snapshot.data!.exists) {
+              if (!snapshot.hasData || !snapshot.data!.exists)
                 return const Center(child: Text("Event not found"));
-              }
 
               final data = snapshot.data!.data() as Map<String, dynamic>;
               final currentTitle = data['eventTitle'] as String? ?? 'Results';
 
+              // --- YENİ: Tarih Verilerini Çek ---
+              final Timestamp? startTs = data['startTime'];
+              final Timestamp? endTs = data['endTime'];
+              // --------------------------------
+
               final results =
                   Map<String, dynamic>.from(data['results'] as Map? ?? {});
               final questions = data['questions'] as List<dynamic>? ?? [];
-
               final statsLogicResult = _calculateStatsLogic(results, questions);
               final statsData =
                   statsLogicResult['stats'] as Map<String, dynamic>;
@@ -713,6 +695,10 @@ class _QRResultScreenState extends State<QRResultScreen> {
                     child: SingleChildScrollView(
                       child: Column(
                         children: [
+                          // --- YENİ: ZAMAN BİLGİSİ KARTI ---
+                          _buildTimeInfoCard(startTs, endTs),
+                          // ---------------------------------
+
                           // QR KODU VE LİNK KARTI
                           Container(
                             margin: const EdgeInsets.symmetric(
@@ -753,27 +739,24 @@ class _QRResultScreenState extends State<QRResultScreen> {
                                         _shareQrCode(currentTitle, qrData),
                                     icon: Icon(Icons.ios_share_rounded,
                                         color: _primaryColor, size: 22),
-                                    label: Text(
-                                      "share_qr".tr(),
-                                      style: TextStyle(
-                                        color: _primaryColor,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        letterSpacing: 0.5,
-                                      ),
-                                    ),
+                                    label: Text("share_qr".tr(),
+                                        style: TextStyle(
+                                            color: _primaryColor,
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                            letterSpacing: 0.5)),
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(0xFFF1F5F9),
-                                      foregroundColor:
-                                          _primaryColor.withOpacity(0.1),
-                                      elevation: 0,
-                                      side: BorderSide.none,
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 18),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(16),
-                                      ),
-                                    ),
+                                        backgroundColor:
+                                            const Color(0xFFF1F5F9),
+                                        foregroundColor:
+                                            _primaryColor.withOpacity(0.1),
+                                        elevation: 0,
+                                        side: BorderSide.none,
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 18),
+                                        shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(16))),
                                   ),
                                 ),
                                 const SizedBox(height: 12),
@@ -783,40 +766,33 @@ class _QRResultScreenState extends State<QRResultScreen> {
                                     onPressed: () => _copyLink(qrData),
                                     icon: Icon(Icons.copy_rounded,
                                         color: _secondaryColor, size: 20),
-                                    label: Text(
-                                      "copy_link".tr(),
-                                      style: TextStyle(
-                                        color: _secondaryColor,
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 14,
-                                      ),
-                                    ),
+                                    label: Text("copy_link".tr(),
+                                        style: TextStyle(
+                                            color: _secondaryColor,
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 14)),
                                     style: TextButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 12),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                        side: BorderSide(color: _borderColor),
-                                      ),
-                                    ),
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 12),
+                                        shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                            side: BorderSide(
+                                                color: _borderColor))),
                                   ),
                                 ),
                               ],
                             ),
                           ),
-
                           const SizedBox(height: 8),
                           _buildViewSelector(),
                           const SizedBox(height: 8),
-
-                          // İÇERİK (LİSTE/GRAFİK)
                           if (_currentViewMode == 'LIST')
                             _buildListView(results)
                           else if (_currentViewMode == 'STATS')
                             _buildStatsView(statsData)
                           else
                             _buildChartView(statsData),
-
                           const SizedBox(height: 20),
                         ],
                       ),

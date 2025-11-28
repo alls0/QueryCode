@@ -26,22 +26,15 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
   List<dynamic> _questions = [];
   int _currentQuestionIndex = 0;
 
-  // Cevap Yönetimi
-  String? _selectedAnswer; // Seçilen şıkkın metni veya özel kod
-  final TextEditingController _otherAnswerController =
-      TextEditingController(); // Açık uçlu cevap için
-  static const String _otherOptionKey =
-      '__OTHER_OPTION_SELECTED__'; // Sabit anahtar
+  String? _selectedAnswer;
+  final TextEditingController _otherAnswerController = TextEditingController();
+  static const String _otherOptionKey = '__OTHER_OPTION_SELECTED__';
 
   final List<Map<String, String>> _userAnswers = [];
-
   final PageController _mediaPageController = PageController();
   int _currentMediaIndex = 0;
-
-  // Cihaz Kimliği
   String? _deviceId;
 
-  // Tasarım Renkleri
   final Color _primaryColor = const Color(0xFF1A202C);
   final Color _bgColor = const Color(0xFFF8FAFC);
   final Color _surfaceColor = Colors.white;
@@ -77,6 +70,34 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
       if (docSnapshot.exists) {
         final data = docSnapshot.data()!;
 
+        final Timestamp? startTs = data['startTime'];
+        final Timestamp? endTs = data['endTime'];
+
+        if (startTs != null && endTs != null) {
+          final DateTime now = DateTime.now();
+          final DateTime start = startTs.toDate();
+          final DateTime end = endTs.toDate();
+          final DateFormat formatter = DateFormat('dd MMM HH:mm');
+
+          if (now.isBefore(start)) {
+            setState(() {
+              _errorMessage =
+                  "Etkinlik henüz başlamadı.\nBaşlangıç: ${formatter.format(start)}";
+              _isLoading = false;
+            });
+            return;
+          }
+
+          if (now.isAfter(end)) {
+            setState(() {
+              _errorMessage =
+                  "Etkinlik sona erdi.\nBitiş: ${formatter.format(end)}";
+              _isLoading = false;
+            });
+            return;
+          }
+        }
+
         final List<dynamic> votedDevices = data['votedDevices'] ?? [];
         if (votedDevices.contains(_deviceId)) {
           setState(() {
@@ -105,12 +126,10 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
   }
 
   void _submitAndGoToNext() async {
-    // Cevabı belirle: Eğer "Diğer" seçiliyse textfield'dan al, değilse seçili şıkkı al
     String finalAnswer = _selectedAnswer == _otherOptionKey
         ? _otherAnswerController.text.trim()
         : _selectedAnswer!;
 
-    // Boş cevap kontrolü (Açık uçlu seçip boş bırakırsa)
     if (finalAnswer.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Lütfen bir cevap yazın.")),
@@ -124,7 +143,6 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
     });
 
     if (_currentQuestionIndex >= _questions.length - 1) {
-      // --- SON SORU: GÖNDERME ---
       setState(() => _isLoading = true);
 
       try {
@@ -177,11 +195,10 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
         }
       }
     } else {
-      // --- SONRAKİ SORU ---
       setState(() {
         _currentQuestionIndex++;
         _selectedAnswer = null;
-        _otherAnswerController.clear(); // Controller'ı temizle
+        _otherAnswerController.clear();
         _currentMediaIndex = 0;
       });
     }
@@ -197,12 +214,10 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
         ? (currentQuestion['attachments'] as List<dynamic>? ?? [])
         : [];
 
-    // Açık uçlu izin veriliyor mu?
     final bool allowOpenEnded = currentQuestion != null
         ? (currentQuestion['allowOpenEnded'] ?? false)
         : false;
 
-    // Seçenekler listesini hazırla
     List<dynamic> options = [];
     if (currentQuestion != null && currentQuestion['options'] != null) {
       options = List.from(currentQuestion['options']);
@@ -230,15 +245,31 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
           ? Center(child: CircularProgressIndicator(color: _primaryColor))
           : _errorMessage.isNotEmpty
               ? Center(
-                  child: Text(_errorMessage,
-                      style: const TextStyle(color: Colors.red)))
+                  child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.info_outline_rounded,
+                          size: 60, color: Colors.orangeAccent),
+                      const SizedBox(height: 16),
+                      Text(
+                        _errorMessage,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                            color: Colors.black87,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w500),
+                      ),
+                    ],
+                  ),
+                ))
               : Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       const SizedBox(height: 10),
-                      // Soru Metni
                       Container(
                         padding: const EdgeInsets.all(24),
                         decoration: BoxDecoration(
@@ -256,8 +287,6 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
                         ),
                       ),
                       const SizedBox(height: 20),
-
-                      // Medya Alanı (Varsa)
                       if (rawAttachments.isNotEmpty) ...[
                         SizedBox(
                           height: 250,
@@ -286,13 +315,10 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
                         ),
                         const SizedBox(height: 20),
                       ],
-
-                      // Seçenekler Listesi
                       Expanded(
                         child: SingleChildScrollView(
                           child: Column(
                             children: [
-                              // 1. Standart Seçenekler
                               ...options.map((option) {
                                 final bool isSelected =
                                     _selectedAnswer == option;
@@ -330,8 +356,6 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
                                   ),
                                 );
                               }).toList(),
-
-                              // 2. Açık Uçlu (Diğer) Seçeneği
                               if (allowOpenEnded)
                                 Padding(
                                   padding: const EdgeInsets.only(bottom: 12.0),
@@ -386,7 +410,6 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
                                           ),
                                         ),
                                       ),
-                                      // Eğer Diğer seçiliyse TextField göster
                                       if (_selectedAnswer == _otherOptionKey)
                                         Padding(
                                           padding:
@@ -421,10 +444,7 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
                           ),
                         ),
                       ),
-
                       const SizedBox(height: 10),
-
-                      // İleri Butonu
                       SafeArea(
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
