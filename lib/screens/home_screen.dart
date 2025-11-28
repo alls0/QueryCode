@@ -19,9 +19,9 @@ class HomeScreen extends StatelessWidget {
     int selectedRating = 0;
     String selectedType = 'Öneri';
     List<String> feedbackTypes = ['Öneri', 'Hata', 'Diğer'];
-    
+
     // YENİ EKLENEN DEĞİŞKEN: Hata Mesajı Kontrolü
-    String? inputErrorText; 
+    String? inputErrorText;
     bool isLoading = false;
 
     showModalBottomSheet(
@@ -81,12 +81,14 @@ class HomeScreen extends StatelessWidget {
                           selectedColor: primaryBlue.withOpacity(0.1),
                           labelStyle: TextStyle(
                             color: isSelected ? primaryBlue : Colors.grey,
-                            fontWeight:
-                                isSelected ? FontWeight.bold : FontWeight.normal,
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.normal,
                           ),
                           backgroundColor: bgLight,
                           side: BorderSide(
-                            color: isSelected ? primaryBlue : Colors.transparent,
+                            color:
+                                isSelected ? primaryBlue : Colors.transparent,
                           ),
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8)),
@@ -117,26 +119,35 @@ class HomeScreen extends StatelessWidget {
                         filled: true,
                         fillColor: bgLight,
                         // --- HATA MESAJI BURADA GÖSTERİLİR ---
-                        errorText: inputErrorText, 
+                        errorText: inputErrorText,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
                           borderSide: BorderSide.none,
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
-                          borderSide: BorderSide(color: primaryBlue, width: 1.5),
+                          borderSide:
+                              BorderSide(color: primaryBlue, width: 1.5),
                         ),
                         // Hata durumunda çerçeve rengi
                         errorBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
-                          borderSide: BorderSide(color: Colors.red.shade300, width: 1.5),
+                          borderSide: BorderSide(
+                              color: Colors.red.shade300, width: 1.5),
                         ),
                       ),
                     ),
-                    
+
                     // Puanlama (Yıldızlar)
-                    const SizedBox(height: 12), // Mesaj ile yıldız arası biraz daraltıldı
-                    Center(child: Text(selectedRating > 0 ? "$selectedRating Yıldız" : "Puan Verin", style: TextStyle(color: Colors.grey.shade600, fontSize: 12))),
+                    const SizedBox(
+                        height: 12), // Mesaj ile yıldız arası biraz daraltıldı
+                    Center(
+                        child: Text(
+                            selectedRating > 0
+                                ? "$selectedRating Yıldız"
+                                : "Puan Verin",
+                            style: TextStyle(
+                                color: Colors.grey.shade600, fontSize: 12))),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: List.generate(5, (index) {
@@ -150,9 +161,9 @@ class HomeScreen extends StatelessWidget {
                           ),
                           onPressed: () {
                             setModalState(() {
-                               selectedRating = index + 1;
-                               // Eğer kullanıcı yıldız seçerse, hata mesajını da temizleyelim (çünkü artık gönderebilir)
-                               inputErrorText = null; 
+                              selectedRating = index + 1;
+                              // Eğer kullanıcı yıldız seçerse, hata mesajını da temizleyelim (çünkü artık gönderebilir)
+                              inputErrorText = null;
                             });
                           },
                         );
@@ -178,9 +189,11 @@ class HomeScreen extends StatelessWidget {
                                 // --- VALİDASYON MANTIĞI ---
                                 // Eğer hem mesaj boşsa HEM DE puan verilmemişse hata ver.
                                 // Yani: Sadece yıldız verirse geçebilir, sadece mesaj yazarsa geçebilir.
-                                if (feedbackController.text.trim().isEmpty && selectedRating == 0) {
+                                if (feedbackController.text.trim().isEmpty &&
+                                    selectedRating == 0) {
                                   setModalState(() {
-                                    inputErrorText = "Lütfen bir mesaj yazın veya puan verin.";
+                                    inputErrorText =
+                                        "Lütfen bir mesaj yazın veya puan verin.";
                                   });
                                   return;
                                 }
@@ -321,8 +334,10 @@ class HomeScreen extends StatelessWidget {
                         context.setLocale(const Locale('en'));
                     },
                     itemBuilder: (context) => [
-                      const PopupMenuItem(value: 'TR', child: Text('🇹🇷 Türkçe')),
-                      const PopupMenuItem(value: 'EN', child: Text('🇬🇧 English')),
+                      const PopupMenuItem(
+                          value: 'TR', child: Text('🇹🇷 Türkçe')),
+                      const PopupMenuItem(
+                          value: 'EN', child: Text('🇬🇧 English')),
                     ],
                     child: Container(
                       padding: const EdgeInsets.symmetric(
@@ -334,11 +349,13 @@ class HomeScreen extends StatelessWidget {
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.language, color: iconColor, size: 20),
+                          const Icon(Icons.language,
+                              color: iconColor, size: 20),
                           const SizedBox(width: 8),
                           Text("language".tr(),
                               style: const TextStyle(
-                                  fontWeight: FontWeight.w600, color: textColor)),
+                                  fontWeight: FontWeight.w600,
+                                  color: textColor)),
                           const SizedBox(width: 4),
                           const Icon(Icons.keyboard_arrow_down_rounded,
                               color: iconColor, size: 18),
@@ -364,7 +381,7 @@ class HomeScreen extends StatelessWidget {
                               color: iconColor, size: 24),
                         ),
                       ),
-                      
+
                       const SizedBox(width: 12), // İki buton arası boşluk
 
                       // Mevcut Bilgi Butonu
@@ -420,15 +437,7 @@ class HomeScreen extends StatelessWidget {
                         ],
                       ),
                       padding: const EdgeInsets.all(20),
-                      child: ColorFiltered(
-                        colorFilter: const ColorFilter.matrix(<double>[
-                          0.2126, 0.7152, 0.0722, 0, 0,
-                          0.2126, 0.7152, 0.0722, 0, 0,
-                          0.2126, 0.7152, 0.0722, 0, 0,
-                          0, 0, 0, 1, 0,
-                        ]),
-                        child: Image.asset('assets/images/logo.png'),
-                      ),
+                      child: Image.asset('assets/images/logo4.png'),
                     ),
                     const SizedBox(height: 32),
                     Text(
@@ -489,7 +498,8 @@ class HomeScreen extends StatelessWidget {
                         backgroundColor: Colors.white,
                         foregroundColor: primaryColor,
                         padding: const EdgeInsets.symmetric(vertical: 20),
-                        side: BorderSide(color: Colors.grey.shade300, width: 1.5),
+                        side:
+                            BorderSide(color: Colors.grey.shade300, width: 1.5),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(20)),
                       ),
@@ -508,7 +518,6 @@ class HomeScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 12),
-
                   GestureDetector(
                     onTap: () => Navigator.push(
                         context,
@@ -520,7 +529,8 @@ class HomeScreen extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.grey.shade300, width: 1.5),
+                        border:
+                            Border.all(color: Colors.grey.shade300, width: 1.5),
                       ),
                       child: const Icon(Icons.history_rounded,
                           color: primaryColor, size: 28),
