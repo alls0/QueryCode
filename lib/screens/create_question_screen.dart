@@ -48,7 +48,7 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
   bool _isNicknameRequired = true;
   bool _isLoading = false;
   final String _loadingText =
-      "Oluşturuluyor..."; // Sadeleştirilmiş yükleme metni
+      "..."; // Sadeleştirilmiş yükleme metni
 
   final ImagePicker _picker = ImagePicker();
 
