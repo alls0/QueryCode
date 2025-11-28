@@ -10,6 +10,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/services.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // EKLENDİ: Kimlik kontrolü için
 
 class QRResultScreen extends StatefulWidget {
   final String eventId;
@@ -43,7 +44,59 @@ class _QRResultScreenState extends State<QRResultScreen> {
     super.dispose();
   }
 
-  // --- İSTATİSTİK HESAPLAMA (BURASI "DİĞER" OLARAK GRUPLAR) ---
+  // --- YENİ EKLENEN: ÇIKIŞ KONTROL MANTIĞI ---
+  Future<bool> _onWillPop() async {
+    final user = FirebaseAuth.instance.currentUser;
+
+    // 1. Durum: Kullanıcı giriş yapmışsa (Üye ise), uyarı vermeden çıkabilir.
+    if (user != null) {
+      return true;
+    }
+
+    // 2. Durum: Kullanıcı Misafir ise, uyarı ver.
+    final shouldLeave = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.orange.shade700),
+            const SizedBox(width: 10),
+            Text("attention".tr(),
+                style:
+                    const TextStyle(fontWeight: FontWeight.bold)), // "Dikkat"
+          ],
+        ),
+        content: const Text(
+          "Giriş yapmadan etkinlik oluşturduğunuz için, bu ekrandan çıkarsanız sonuçlara bir daha erişemeyeceksiniz.\n\nÇıkmak istediğinize emin misiniz?",
+          style: TextStyle(fontSize: 15),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false), // Kal
+            child:
+                Text("cancel".tr(), style: TextStyle(color: _secondaryColor)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true), // Çık
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade50,
+              foregroundColor: Colors.red,
+              elevation: 0,
+            ),
+            child: Text("exit".tr(),
+                style: const TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    return shouldLeave ?? false;
+  }
+  // ---------------------------------------------
+
+  // --- İSTATİSTİK HESAPLAMA ---
   Map<String, dynamic> _calculateStatsLogic(
       Map<String, dynamic> results, List<dynamic> questions) {
     if (results.isEmpty) {
@@ -151,7 +204,7 @@ class _QRResultScreenState extends State<QRResultScreen> {
     }
   }
 
-  // --- HEADER ---
+  // --- HEADER (GÜNCELLENDİ: GERİ BUTONU KONTROLÜ EKLENDİ) ---
   Widget _buildHeader(BuildContext context, String title) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
@@ -159,7 +212,12 @@ class _QRResultScreenState extends State<QRResultScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           GestureDetector(
-            onTap: () => Navigator.pop(context),
+            // BURASI DEĞİŞTİ: Direkt pop yerine kontrol yapılıyor
+            onTap: () async {
+              if (await _onWillPop()) {
+                if (context.mounted) Navigator.pop(context);
+              }
+            },
             child: Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -174,8 +232,11 @@ class _QRResultScreenState extends State<QRResultScreen> {
                   ),
                 ],
               ),
-              child: Icon(Icons.arrow_back_ios_new_rounded,
-                  size: 20, color: _primaryColor),
+              child: Icon(
+                  Icons
+                      .close_rounded, // İkonu çarpı yaptım, çıkış olduğu belli olsun diye
+                  size: 20,
+                  color: _primaryColor),
             ),
           ),
           Expanded(
@@ -262,7 +323,7 @@ class _QRResultScreenState extends State<QRResultScreen> {
     );
   }
 
-  // --- LİSTE GÖRÜNÜMÜ (BURASI ORİJİNAL CEVABI GÖSTERİR) ---
+  // --- LİSTE GÖRÜNÜMÜ ---
   Widget _buildListView(Map<String, dynamic> results) {
     if (results.isEmpty) return _buildEmptyState();
 
@@ -304,7 +365,6 @@ class _QRResultScreenState extends State<QRResultScreen> {
                     fontWeight: FontWeight.w700, color: _primaryColor)),
             children: answers.map((a) {
               if (a is Map) {
-                // BURADA DEĞİŞİKLİK YAPILMADI: Kullanıcı ne yazdıysa o görünür.
                 return ListTile(
                   title: Text(a['question']?.toString() ?? '',
                       style: TextStyle(fontSize: 13, color: _secondaryColor)),
@@ -615,150 +675,157 @@ class _QRResultScreenState extends State<QRResultScreen> {
   Widget build(BuildContext context) {
     final eventRef =
         FirebaseFirestore.instance.collection('events').doc(widget.eventId);
-    final qrData = 'https://querycode-app.web.app/event/${widget.eventId}';
+    final qrData =
+        'https://querycode-app.web.app/event/${widget.eventId}'; // Kendi web linkine göre ayarla
 
-    return Scaffold(
-      backgroundColor: _backgroundColor,
-      body: SafeArea(
-        child: StreamBuilder<DocumentSnapshot>(
-          stream: eventRef.snapshots(),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
+    // GÜNCELLENDİ: WillPopScope ile tüm sayfayı sarmaladık
+    return WillPopScope(
+      onWillPop: _onWillPop,
+      child: Scaffold(
+        backgroundColor: _backgroundColor,
+        body: SafeArea(
+          child: StreamBuilder<DocumentSnapshot>(
+            stream: eventRef.snapshots(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
-            if (!snapshot.hasData || !snapshot.data!.exists) {
-              return const Center(child: Text("Event not found"));
-            }
+              if (!snapshot.hasData || !snapshot.data!.exists) {
+                return const Center(child: Text("Event not found"));
+              }
 
-            final data = snapshot.data!.data() as Map<String, dynamic>;
-            final currentTitle = data['eventTitle'] as String? ?? 'Results';
+              final data = snapshot.data!.data() as Map<String, dynamic>;
+              final currentTitle = data['eventTitle'] as String? ?? 'Results';
 
-            final results =
-                Map<String, dynamic>.from(data['results'] as Map? ?? {});
-            final questions = data['questions'] as List<dynamic>? ?? [];
+              final results =
+                  Map<String, dynamic>.from(data['results'] as Map? ?? {});
+              final questions = data['questions'] as List<dynamic>? ?? [];
 
-            final statsLogicResult = _calculateStatsLogic(results, questions);
-            final statsData = statsLogicResult['stats'] as Map<String, dynamic>;
+              final statsLogicResult = _calculateStatsLogic(results, questions);
+              final statsData =
+                  statsLogicResult['stats'] as Map<String, dynamic>;
 
-            return Column(
-              children: [
-                _buildHeader(context, currentTitle),
-                Expanded(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      children: [
-                        // QR KODU VE LİNK KARTI
-                        Container(
-                          margin: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 8),
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: _borderColor),
-                              boxShadow: [
-                                BoxShadow(
-                                    color: Colors.black.withOpacity(0.02),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 4))
-                              ]),
-                          child: Column(
-                            children: [
-                              RepaintBoundary(
-                                key: _qrKey,
-                                child: QrImageView(
-                                  data: qrData,
-                                  size: 180,
-                                  backgroundColor: Colors.white,
-                                  dataModuleStyle: QrDataModuleStyle(
-                                      dataModuleShape: QrDataModuleShape.square,
-                                      color: _primaryColor),
-                                  eyeStyle: QrEyeStyle(
-                                      eyeShape: QrEyeShape.square,
-                                      color: _primaryColor),
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              SizedBox(
-                                width: double.infinity,
-                                child: ElevatedButton.icon(
-                                  onPressed: () =>
-                                      _shareQrCode(currentTitle, qrData),
-                                  icon: Icon(Icons.ios_share_rounded,
-                                      color: _primaryColor, size: 22),
-                                  label: Text(
-                                    "share_qr".tr(),
-                                    style: TextStyle(
-                                      color: _primaryColor,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      letterSpacing: 0.5,
-                                    ),
-                                  ),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFFF1F5F9),
-                                    foregroundColor:
-                                        _primaryColor.withOpacity(0.1),
-                                    elevation: 0,
-                                    side: BorderSide.none,
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 18),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(16),
-                                    ),
+              return Column(
+                children: [
+                  _buildHeader(context, currentTitle),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: Column(
+                        children: [
+                          // QR KODU VE LİNK KARTI
+                          Container(
+                            margin: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 8),
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: _borderColor),
+                                boxShadow: [
+                                  BoxShadow(
+                                      color: Colors.black.withOpacity(0.02),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 4))
+                                ]),
+                            child: Column(
+                              children: [
+                                RepaintBoundary(
+                                  key: _qrKey,
+                                  child: QrImageView(
+                                    data: qrData,
+                                    size: 180,
+                                    backgroundColor: Colors.white,
+                                    dataModuleStyle: QrDataModuleStyle(
+                                        dataModuleShape:
+                                            QrDataModuleShape.square,
+                                        color: _primaryColor),
+                                    eyeStyle: QrEyeStyle(
+                                        eyeShape: QrEyeShape.square,
+                                        color: _primaryColor),
                                   ),
                                 ),
-                              ),
-                              const SizedBox(height: 12),
-                              SizedBox(
-                                width: double.infinity,
-                                child: TextButton.icon(
-                                  onPressed: () => _copyLink(qrData),
-                                  icon: Icon(Icons.copy_rounded,
-                                      color: _secondaryColor, size: 20),
-                                  label: Text(
-                                    "copy_link".tr(),
-                                    style: TextStyle(
-                                      color: _secondaryColor,
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 14,
+                                const SizedBox(height: 16),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton.icon(
+                                    onPressed: () =>
+                                        _shareQrCode(currentTitle, qrData),
+                                    icon: Icon(Icons.ios_share_rounded,
+                                        color: _primaryColor, size: 22),
+                                    label: Text(
+                                      "share_qr".tr(),
+                                      style: TextStyle(
+                                        color: _primaryColor,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 0.5,
+                                      ),
                                     ),
-                                  ),
-                                  style: TextButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 12),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                      side: BorderSide(color: _borderColor),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFFF1F5F9),
+                                      foregroundColor:
+                                          _primaryColor.withOpacity(0.1),
+                                      elevation: 0,
+                                      side: BorderSide.none,
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 18),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                            ],
+                                const SizedBox(height: 12),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: TextButton.icon(
+                                    onPressed: () => _copyLink(qrData),
+                                    icon: Icon(Icons.copy_rounded,
+                                        color: _secondaryColor, size: 20),
+                                    label: Text(
+                                      "copy_link".tr(),
+                                      style: TextStyle(
+                                        color: _secondaryColor,
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                    style: TextButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 12),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        side: BorderSide(color: _borderColor),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
 
-                        const SizedBox(height: 8),
-                        _buildViewSelector(),
-                        const SizedBox(height: 8),
+                          const SizedBox(height: 8),
+                          _buildViewSelector(),
+                          const SizedBox(height: 8),
 
-                        // İÇERİK (LİSTE/GRAFİK)
-                        if (_currentViewMode == 'LIST')
-                          _buildListView(results)
-                        else if (_currentViewMode == 'STATS')
-                          _buildStatsView(statsData)
-                        else
-                          _buildChartView(statsData),
+                          // İÇERİK (LİSTE/GRAFİK)
+                          if (_currentViewMode == 'LIST')
+                            _buildListView(results)
+                          else if (_currentViewMode == 'STATS')
+                            _buildStatsView(statsData)
+                          else
+                            _buildChartView(statsData),
 
-                        const SizedBox(height: 20),
-                      ],
+                          const SizedBox(height: 20),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              ],
-            );
-          },
+                ],
+              );
+            },
+          ),
         ),
       ),
     );
