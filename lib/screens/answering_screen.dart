@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // EKLENDİ
+import 'package:uuid/uuid.dart'; // EKLENDİ
 import 'thank_you_screen.dart';
 import 'package:easy_localization/easy_localization.dart';
 
@@ -29,6 +31,9 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
   final PageController _mediaPageController = PageController();
   int _currentMediaIndex = 0;
 
+  // Cihaz Kimliği
+  String? _deviceId;
+
   // Tasarım Renkleri
   final Color _primaryColor = const Color(0xFF1A202C);
   final Color _bgColor = const Color(0xFFF8FAFC);
@@ -48,14 +53,37 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
 
   Future<void> _fetchEventData() async {
     try {
+      // 1. Cihaz ID'sini Al veya Oluştur
+      final prefs = await SharedPreferences.getInstance();
+      _deviceId = prefs.getString('device_unique_id');
+
+      if (_deviceId == null) {
+        _deviceId = const Uuid().v4();
+        await prefs.setString('device_unique_id', _deviceId!);
+      }
+
+      // 2. Etkinlik Verisini Çek
       final docSnapshot = await FirebaseFirestore.instance
           .collection('events')
           .doc(widget.eventId)
           .get();
 
       if (docSnapshot.exists) {
+        final data = docSnapshot.data()!;
+
+        // 3. KONTROL: Cihaz daha önce oy vermiş mi?
+        final List<dynamic> votedDevices = data['votedDevices'] ?? [];
+        if (votedDevices.contains(_deviceId)) {
+          setState(() {
+            _errorMessage =
+                "Bu etkinlikte daha önce oy kullandınız."; // "already_voted_error".tr() eklenebilir
+            _isLoading = false;
+          });
+          return;
+        }
+
         setState(() {
-          _questions = docSnapshot.data()?['questions'] ?? [];
+          _questions = data['questions'] ?? [];
           _isLoading = false;
         });
       } else {
@@ -79,18 +107,36 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
     });
 
     if (_currentQuestionIndex >= _questions.length - 1) {
+      // --- SON SORU: GÖNDERME İŞLEMİ ---
       setState(() {
         _isLoading = true;
       });
+
       try {
         final String respondentName = widget.nickname?.trim() ??
             'Anonim_${DateTime.now().millisecondsSinceEpoch}';
 
-        await FirebaseFirestore.instance
-            .collection('events')
-            .doc(widget.eventId)
-            .update({
-          'results.$respondentName': _userAnswers,
+        final eventRef =
+            FirebaseFirestore.instance.collection('events').doc(widget.eventId);
+
+        // Transaction ile güvenli kayıt (Çakışma ve mükerrer oy önleme)
+        await FirebaseFirestore.instance.runTransaction((transaction) async {
+          DocumentSnapshot snapshot = await transaction.get(eventRef);
+
+          if (!snapshot.exists) throw Exception("Event not found");
+
+          final data = snapshot.data() as Map<String, dynamic>;
+          final List<dynamic> votedDevices = data['votedDevices'] ?? [];
+
+          // Son kontrol: İşlem anında başka bir yerden oy kullanıldı mı?
+          if (votedDevices.contains(_deviceId)) {
+            throw Exception("Already voted");
+          }
+
+          transaction.update(eventRef, {
+            'results.$respondentName': _userAnswers,
+            'votedDevices': FieldValue.arrayUnion([_deviceId])
+          });
         });
 
         if (mounted) {
@@ -101,15 +147,30 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
         }
       } catch (e) {
         if (mounted) {
+          String errorMsg = "answer_error_submit".tr();
+          if (e.toString().contains("Already voted")) {
+            errorMsg = "Daha önce oy kullandınız!";
+          }
+
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("answer_error_submit".tr())),
+            SnackBar(content: Text(errorMsg)),
           );
-          setState(() {
-            _isLoading = false;
-          });
+
+          // Eğer hata "Zaten oy kullanıldı" ise ekranı kilitle
+          if (e.toString().contains("Already voted")) {
+            setState(() {
+              _errorMessage = "Daha önce oy kullandınız!";
+              _isLoading = false;
+            });
+          } else {
+            setState(() {
+              _isLoading = false;
+            });
+          }
         }
       }
     } else {
+      // --- SONRAKİ SORUYA GEÇ ---
       setState(() {
         _currentQuestionIndex++;
         _selectedAnswer = null;
@@ -144,6 +205,8 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
         backgroundColor: _bgColor,
         elevation: 0,
         centerTitle: true,
+        automaticallyImplyLeading:
+            false, // Geri butonunu kaldır (Zorunlu değil ama anket ortasında çıkmamaları için)
         iconTheme: IconThemeData(color: _primaryColor),
         title: _isLoading
             ? null
@@ -159,8 +222,27 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
           ? Center(child: CircularProgressIndicator(color: _primaryColor))
           : _errorMessage.isNotEmpty
               ? Center(
-                  child: Text(_errorMessage,
-                      style: const TextStyle(color: Colors.red, fontSize: 16)))
+                  child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.error_outline_rounded,
+                        size: 50, color: Colors.red.shade300),
+                    const SizedBox(height: 16),
+                    Text(_errorMessage,
+                        style: const TextStyle(
+                            color: Colors.black87,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 20),
+                    ElevatedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: ElevatedButton.styleFrom(
+                          backgroundColor: _primaryColor,
+                          foregroundColor: Colors.white),
+                      child: const Text("Geri Dön"),
+                    )
+                  ],
+                ))
               : Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: Column(

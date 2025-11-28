@@ -421,8 +421,8 @@ class HomeScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 20),
                     Container(
-                      width: 170,
-                      height: 170,
+                      width: 190,
+                      height: 190,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: const Color.fromARGB(255, 255, 255, 255),

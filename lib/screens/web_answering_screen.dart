@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // EKLENDİ
+import 'package:uuid/uuid.dart'; // EKLENDİ
 import 'thank_you_screen.dart';
 import 'package:easy_localization/easy_localization.dart';
 
@@ -27,6 +29,9 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
   final PageController _mediaPageController = PageController();
   int _currentMediaIndex = 0;
 
+  // YENİ: Cihaz Kimliği Değişkeni
+  String? _deviceId;
+
   // Tasarım Sabitleri
   final Color _primaryColor = const Color(0xFF1A202C);
   final Color _bgColor = const Color(0xFFF8FAFC);
@@ -35,7 +40,7 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchEventData();
+    _checkDeviceAndFetchEvent(); // Metod ismi güncellendi
   }
 
   @override
@@ -45,8 +50,19 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
     super.dispose();
   }
 
-  Future<void> _fetchEventData() async {
+  // --- YENİ: CİHAZ ID ALMA VE KONTROL ETME ---
+  Future<void> _checkDeviceAndFetchEvent() async {
     try {
+      // 1. Cihaz ID'sini SharedPreferences'tan al veya oluştur
+      final prefs = await SharedPreferences.getInstance();
+      _deviceId = prefs.getString('device_unique_id');
+
+      if (_deviceId == null) {
+        _deviceId = const Uuid().v4();
+        await prefs.setString('device_unique_id', _deviceId!);
+      }
+
+      // 2. Etkinliği Çek
       final docSnapshot = await FirebaseFirestore.instance
           .collection('events')
           .doc(widget.eventId)
@@ -54,6 +70,18 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
 
       if (docSnapshot.exists) {
         final data = docSnapshot.data()!;
+
+        // 3. KONTROL: Bu cihaz daha önce oy vermiş mi?
+        final List<dynamic> votedDevices = data['votedDevices'] ?? [];
+        if (votedDevices.contains(_deviceId)) {
+          setState(() {
+            _errorMessage =
+                "You have already voted in this event."; // Dil desteği eklenebilir: "already_voted_error".tr()
+            _isLoading = false;
+          });
+          return;
+        }
+
         setState(() {
           _questions = data['questions'] ?? [];
           _isNicknameRequired = data['isNicknameRequired'] ?? false;
@@ -82,6 +110,7 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
     }
   }
 
+  // --- GÜNCELLENEN GÖNDERME METODU (TRANSACTION İLE) ---
   void _submitAndGoToNext() async {
     _userAnswers.add({
       'question': _questions[_currentQuestionIndex]['questionText'],
@@ -89,19 +118,38 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
     });
 
     if (_currentQuestionIndex >= _questions.length - 1) {
+      // SON SORU: GÖNDERME İŞLEMİ
       setState(() {
         _isLoading = true;
       });
+
       try {
         final String respondentName = _nicknameController.text.trim().isNotEmpty
             ? _nicknameController.text.trim()
             : 'Anonim_${DateTime.now().millisecondsSinceEpoch}';
 
-        await FirebaseFirestore.instance
-            .collection('events')
-            .doc(widget.eventId)
-            .update({
-          'results.$respondentName': _userAnswers,
+        final eventRef =
+            FirebaseFirestore.instance.collection('events').doc(widget.eventId);
+
+        // Transaction kullanarak güvenli kayıt (Çakışmaları önler)
+        await FirebaseFirestore.instance.runTransaction((transaction) async {
+          DocumentSnapshot snapshot = await transaction.get(eventRef);
+
+          if (!snapshot.exists) throw Exception("Event not found");
+
+          final data = snapshot.data() as Map<String, dynamic>;
+          final List<dynamic> votedDevices = data['votedDevices'] ?? [];
+
+          // Son bir kez daha kontrol et (Aynı anda iki sekme açmış olabilir)
+          if (votedDevices.contains(_deviceId)) {
+            throw Exception("Already voted");
+          }
+
+          // Güncelleme: Hem sonuçları hem de Cihaz ID'sini ekle
+          transaction.update(eventRef, {
+            'results.$respondentName': _userAnswers,
+            'votedDevices': FieldValue.arrayUnion([_deviceId])
+          });
         });
 
         if (mounted) {
@@ -112,15 +160,24 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
         }
       } catch (e) {
         if (mounted) {
+          String errorMsg = "answer_error_submit".tr();
+          if (e.toString().contains("Already voted")) {
+            errorMsg = "You have already voted!";
+          }
+
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("answer_error_submit".tr())),
+            SnackBar(content: Text(errorMsg)),
           );
           setState(() {
             _isLoading = false;
+            if (e.toString().contains("Already voted")) {
+              _errorMessage = errorMsg; // Ekranı hata mesajıyla kilitle
+            }
           });
         }
       }
     } else {
+      // SONRAKİ SORUYA GEÇ
       setState(() {
         _currentQuestionIndex++;
         _selectedAnswer = null;
@@ -139,13 +196,36 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
           child: _isLoading
               ? CircularProgressIndicator(color: _primaryColor)
               : _errorMessage.isNotEmpty
-                  ? Text(_errorMessage,
-                      style: const TextStyle(color: Colors.red, fontSize: 18))
+                  ? Container(
+                      padding: const EdgeInsets.all(30),
+                      decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(color: Colors.black12, blurRadius: 10)
+                          ]),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.error_outline_rounded,
+                              color: Colors.red, size: 50),
+                          const SizedBox(height: 20),
+                          Text(_errorMessage,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                  color: Colors.black87,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    )
                   : _buildCurrentStep(),
         ),
       ),
     );
   }
+
+  // ... (Geri kalan _buildCurrentStep, _buildNicknameStep ve _buildAnsweringStep kodları AYNI kalacak) ...
 
   Widget _buildCurrentStep() {
     if (_currentStep == 0) {
@@ -154,6 +234,9 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
       return _buildAnsweringStep();
     }
   }
+
+  // _buildNicknameStep ve _buildAnsweringStep metodlarını orijinal kodunuzdan olduğu gibi koruyun,
+  // sadece yukarıdaki _checkDeviceAndFetchEvent ve _submitAndGoToNext metodlarını değiştirmeniz yeterli.
 
   Widget _buildNicknameStep() {
     return Container(
@@ -249,7 +332,6 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
               style: TextStyle(
                   color: Colors.grey.shade500, fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
-
           Text(
             currentQuestion['questionText'] ?? "answer_question_not_found".tr(),
             textAlign: TextAlign.center,
@@ -258,10 +340,7 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
                 fontWeight: FontWeight.w800,
                 color: _primaryColor),
           ),
-
           const SizedBox(height: 24),
-
-          // --- MEDYA GÖSTERİMİ ---
           if (rawAttachments.isNotEmpty) ...[
             Container(
               height: 300,
@@ -357,7 +436,6 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
             ),
             const SizedBox(height: 24),
           ],
-
           ...(currentQuestion['options'] as List<dynamic>).map((option) {
             final bool isSelected = _selectedAnswer == option;
             return Padding(
@@ -387,9 +465,7 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
               ),
             );
           }).toList(),
-
           const SizedBox(height: 24),
-
           ElevatedButton(
             style: ElevatedButton.styleFrom(
                 backgroundColor: _primaryColor,
