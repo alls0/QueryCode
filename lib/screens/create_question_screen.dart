@@ -36,7 +36,7 @@ class CreateQuestionScreen extends StatefulWidget {
 class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
   // --- LİMİTLER ---
   static const int _maxQuestions = 10;
-  static const int _maxOptions = 5;
+  static const int _maxOptions = 10;
   static const int _maxAttachments = 3;
 
   late List<QuestionModel> _questions;
@@ -477,41 +477,58 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
                         fontSize: 12,
                         letterSpacing: 1)),
                 const SizedBox(height: 12),
-                ...List.generate(question.optionControllers.length, (optIndex) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Row(
-                      children: [
-                        Container(
-                            width: 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                                color: _primaryDark.withOpacity(0.3),
-                                shape: BoxShape.circle)),
-                        const SizedBox(width: 12),
-                        Expanded(
-                            child: TextField(
-                                controller:
-                                    question.optionControllers[optIndex],
-                                style: TextStyle(color: _primaryDark),
-                                decoration: InputDecoration(
-                                    hintText: "create_option_hint".tr(),
-                                    hintStyle: TextStyle(
-                                        color: _softGrey.withOpacity(0.5)),
-                                    border: UnderlineInputBorder(
-                                        borderSide: BorderSide(
-                                            color: Colors.grey.shade200)),
-                                    enabledBorder: UnderlineInputBorder(
-                                        borderSide: BorderSide(
-                                            color: Colors.grey.shade200)),
-                                    focusedBorder: UnderlineInputBorder(
-                                        borderSide:
-                                            BorderSide(color: _primaryDark))))),
-                      ],
-                    ),
-                  );
-                }),
+...List.generate(question.optionControllers.length, (optIndex) {
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 12),
+    child: Row(
+      children: [
+        // Sol taraftaki yuvarlak işaret
+        Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+                color: _primaryDark.withOpacity(0.3),
+                shape: BoxShape.circle)),
+        const SizedBox(width: 12),
 
+        // Seçenek Metin Alanı
+        Expanded(
+            child: TextField(
+                controller: question.optionControllers[optIndex],
+                style: TextStyle(color: _primaryDark),
+                decoration: InputDecoration(
+                    hintText: "create_option_hint".tr(),
+                    hintStyle: TextStyle(
+                        color: _softGrey.withOpacity(0.5)),
+                    border: UnderlineInputBorder(
+                        borderSide: BorderSide(
+                            color: Colors.grey.shade200)),
+                    enabledBorder: UnderlineInputBorder(
+                        borderSide: BorderSide(
+                            color: Colors.grey.shade200)),
+                    focusedBorder: UnderlineInputBorder(
+                        borderSide:
+                            BorderSide(color: _primaryDark))))),
+
+        // --- SİLME BUTONU ---
+        // Sadece 2'den fazla seçenek varsa gösterilir
+        if (question.optionControllers.length > 2)
+          IconButton(
+            icon: Icon(Icons.delete_outline_rounded,
+                color: Colors.red.shade300, size: 22),
+            onPressed: () {
+              setState(() {
+                // Controller'ı temizle ve listeden kaldır
+                question.optionControllers[optIndex].dispose();
+                question.optionControllers.removeAt(optIndex);
+                question.options.removeAt(optIndex);
+              });
+            },
+          ),
+      ],
+    ),
+  );
+}),
                 const SizedBox(height: 8),
                 Align(
                     alignment: Alignment.centerLeft,
