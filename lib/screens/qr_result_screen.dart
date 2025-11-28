@@ -33,19 +33,15 @@ class _QRResultScreenState extends State<QRResultScreen> {
   final Color _secondaryColor = const Color(0xFF718096);
   final Color _borderColor = const Color(0xFFE2E8F0);
 
-  // --- CHART NAVİGASYON ---
-  late PageController _chartPageController;
-  int _currentChartIndex = 0;
+  // (Not: PageController ve Index değişkenleri kaldırıldı çünkü dikey listede gerekmiyor)
 
   @override
   void initState() {
     super.initState();
-    _chartPageController = PageController(viewportFraction: 0.92);
   }
 
   @override
   void dispose() {
-    _chartPageController.dispose();
     super.dispose();
   }
 
@@ -144,34 +140,6 @@ class _QRResultScreenState extends State<QRResultScreen> {
         ),
       );
     }
-  }
-
-  // --- YARDIMCI WIDGET: OK BUTONU (Düzeltilmiş) ---
-  Widget _buildArrowButton(
-      {required IconData icon, required VoidCallback onTap}) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        customBorder: const CircleBorder(),
-        child: Container(
-          padding: const EdgeInsets.all(12), // Alanı biraz büyüttük
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.95),
-            shape: BoxShape.circle,
-            border: Border.all(color: _borderColor),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Icon(icon, color: _primaryColor, size: 24),
-        ),
-      ),
-    );
   }
 
   // --- HEADER ---
@@ -440,251 +408,185 @@ class _QRResultScreenState extends State<QRResultScreen> {
     );
   }
 
-  // --- GRAFİK GÖRÜNÜMÜ ---
+  // --- GRAFİK GÖRÜNÜMÜ (DİKEY LİSTE MODU) ---
   Widget _buildChartView(Map<String, dynamic> stats) {
     if (stats.isEmpty) return _buildEmptyState();
 
     final keys = stats.keys.toList();
 
-    // HATA DÜZELTME: Eğer veri değiştiyse ve index dışarı taştıysa,
-    // hem indexi sıfırla hem de controller'ı başa zıplat.
-    if (_currentChartIndex >= keys.length) {
-      _currentChartIndex = 0;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_chartPageController.hasClients) {
-          _chartPageController.jumpToPage(0);
-        }
-      });
-    }
+    // PageView yerine ListView kullanıyoruz (Alt alta sıralı)
+    return ListView.separated(
+      physics: const NeverScrollableScrollPhysics(),
+      shrinkWrap: true,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      itemCount: keys.length,
+      separatorBuilder: (context, index) => const SizedBox(height: 16),
+      itemBuilder: (context, index) {
+        final question = keys[index];
+        final entryValue = stats[question] as Map<dynamic, dynamic>? ?? {};
+        final options =
+            Map<String, dynamic>.from(entryValue['options'] as Map? ?? {});
+        final totalVotes = (entryValue['totalVotes'] as num?)?.toInt() ?? 0;
 
-    return SizedBox(
-      height: 350,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          PageView.builder(
-            controller: _chartPageController,
-            itemCount: keys.length,
-            onPageChanged: (index) {
-              setState(() {
-                _currentChartIndex = index;
-              });
-            },
-            itemBuilder: (context, index) {
-              final question = keys[index];
-              final entryValue =
-                  stats[question] as Map<dynamic, dynamic>? ?? {};
-              final options = Map<String, dynamic>.from(
-                  entryValue['options'] as Map? ?? {});
-              final totalVotes =
-                  (entryValue['totalVotes'] as num?)?.toInt() ?? 0;
+        int maxVote = 0;
+        options.forEach((_, val) {
+          final valMap = val as Map<dynamic, dynamic>? ?? {};
+          final c = (valMap['count'] as num?)?.toInt() ?? 0;
+          if (c > maxVote) maxVote = c;
+        });
+        final double maxY = (maxVote == 0 ? 5 : maxVote * 1.2).toDouble();
 
-              int maxVote = 0;
-              options.forEach((_, val) {
-                final valMap = val as Map<dynamic, dynamic>? ?? {};
-                final c = (valMap['count'] as num?)?.toInt() ?? 0;
-                if (c > maxVote) maxVote = c;
-              });
-              final double maxY = (maxVote == 0 ? 5 : maxVote * 1.2).toDouble();
+        final barGroups = options.entries.toList().asMap().entries.map((e) {
+          final valMap = e.value.value as Map<dynamic, dynamic>? ?? {};
+          final count = (valMap['count'] as num?)?.toInt() ?? 0;
 
-              final barGroups =
-                  options.entries.toList().asMap().entries.map((e) {
-                final valMap = e.value.value as Map<dynamic, dynamic>? ?? {};
-                final count = (valMap['count'] as num?)?.toInt() ?? 0;
-
-                return BarChartGroupData(
-                  x: e.key,
-                  barRods: [
-                    BarChartRodData(
-                      toY: count.toDouble(),
-                      color: _primaryColor,
-                      width: 22,
-                      borderRadius:
-                          const BorderRadius.vertical(top: Radius.circular(2)),
-                      backDrawRodData: BackgroundBarChartRodData(
-                        show: true,
-                        toY: maxY,
-                        color: Colors.transparent,
-                      ),
-                    )
-                  ],
-                );
-              }).toList();
-
-              return Container(
-                margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: _borderColor),
-                  boxShadow: [
-                    BoxShadow(
-                        color: Colors.black.withOpacity(0.03),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2))
-                  ],
+          return BarChartGroupData(
+            x: e.key,
+            barRods: [
+              BarChartRodData(
+                toY: count.toDouble(),
+                color: _primaryColor,
+                width: 22,
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(4)),
+                backDrawRodData: BackgroundBarChartRodData(
+                  show: true,
+                  toY: maxY,
+                  color: Colors.grey.withOpacity(0.05),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      question,
-                      style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: _primaryColor),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 24),
-                    Expanded(
-                      child: BarChart(
-                        BarChartData(
-                          maxY: maxY,
-                          barGroups: barGroups,
-                          gridData: FlGridData(
-                            show: true,
-                            drawVerticalLine: false,
-                            getDrawingHorizontalLine: (value) => FlLine(
-                              color: _borderColor,
-                              strokeWidth: 1,
-                              dashArray: [3, 3],
-                            ),
-                          ),
-                          borderData: FlBorderData(show: false),
-                          titlesData: FlTitlesData(
-                            topTitles: const AxisTitles(
-                                sideTitles: SideTitles(showTitles: false)),
-                            rightTitles: const AxisTitles(
-                                sideTitles: SideTitles(showTitles: false)),
-                            leftTitles: const AxisTitles(
-                                sideTitles: SideTitles(showTitles: false)),
-                            bottomTitles: AxisTitles(
-                                sideTitles: SideTitles(
-                              showTitles: true,
-                              getTitlesWidget: (val, meta) {
-                                if (val < 0 || val.toInt() >= options.length) {
-                                  return const SizedBox();
-                                }
+              )
+            ],
+          );
+        }).toList();
 
-                                final text =
-                                    options.keys.elementAt(val.toInt());
-                                return Padding(
-                                  padding: const EdgeInsets.only(top: 12.0),
-                                  child: Text(
-                                    text.length > 8
-                                        ? "${text.substring(0, 8)}.."
-                                        : text,
-                                    style: TextStyle(
-                                        fontSize: 12, color: _secondaryColor),
-                                  ),
-                                );
-                              },
-                              reservedSize: 30,
-                            )),
-                          ),
-                          barTouchData: BarTouchData(
-                            touchTooltipData: BarTouchTooltipData(
-                              getTooltipColor: (_) => Colors.white,
-                              tooltipBorder: BorderSide(color: _borderColor),
-                              tooltipPadding: const EdgeInsets.all(8),
-                              tooltipMargin: 8,
-                              getTooltipItem:
-                                  (group, groupIndex, rod, rodIndex) {
-                                if (group.x < 0 || group.x >= options.length)
-                                  return null;
-                                final optionName =
-                                    options.keys.elementAt(group.x);
-                                return BarTooltipItem(
-                                  '$optionName\n',
-                                  TextStyle(
-                                      color: _secondaryColor,
-                                      fontWeight: FontWeight.w500,
-                                      fontSize: 12),
-                                  children: <TextSpan>[
-                                    TextSpan(
-                                      text: '${rod.toY.toInt()} Votes',
-                                      style: TextStyle(
-                                          color: _primaryColor,
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.bold),
-                                    ),
-                                  ],
-                                );
-                              },
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    Container(
-                      margin: const EdgeInsets.only(top: 24),
-                      padding: const EdgeInsets.only(top: 16),
-                      decoration: BoxDecoration(
-                        border: Border(top: BorderSide(color: _borderColor)),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text("total_responses".tr(),
-                              style: TextStyle(
-                                  color: _secondaryColor, fontSize: 14)),
-                          Text("$totalVotes",
-                              style: TextStyle(
-                                  color: _primaryColor,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold)),
-                        ],
-                      ),
-                    ),
-                    Center(
-                      child: Padding(
-                        padding: const EdgeInsets.only(top: 10),
-                        child: Text("${index + 1} / ${keys.length}",
-                            style: TextStyle(
-                                color: Colors.grey.shade300, fontSize: 10)),
-                      ),
-                    )
-                  ],
-                ),
-              );
-            },
+        // Her bir grafik için Container
+        return Container(
+          height: 350, // Sabit yükseklik
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: _borderColor),
+            boxShadow: [
+              BoxShadow(
+                  color: Colors.black.withOpacity(0.03),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2))
+            ],
           ),
-          // SOL OK
-          if (_currentChartIndex > 0)
-            Positioned(
-              left: 10,
-              child: _buildArrowButton(
-                icon: Icons.arrow_back_ios_new_rounded,
-                onTap: () {
-                  if (_chartPageController.hasClients) {
-                    _chartPageController.previousPage(
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeInOut,
-                    );
-                  }
-                },
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                question,
+                style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: _primaryColor),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
-            ),
-          // SAĞ OK
-          if (_currentChartIndex < keys.length - 1)
-            Positioned(
-              right: 10,
-              child: _buildArrowButton(
-                icon: Icons.arrow_forward_ios_rounded,
-                onTap: () {
-                  if (_chartPageController.hasClients) {
-                    _chartPageController.nextPage(
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeInOut,
-                    );
-                  }
-                },
+              const SizedBox(height: 24),
+              Expanded(
+                child: BarChart(
+                  BarChartData(
+                    maxY: maxY,
+                    barGroups: barGroups,
+                    gridData: FlGridData(
+                      show: true,
+                      drawVerticalLine: false,
+                      getDrawingHorizontalLine: (value) => FlLine(
+                        color: _borderColor.withOpacity(0.5),
+                        strokeWidth: 1,
+                        dashArray: [5, 5],
+                      ),
+                    ),
+                    borderData: FlBorderData(show: false),
+                    titlesData: FlTitlesData(
+                      topTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: false)),
+                      rightTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: false)),
+                      leftTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: false)),
+                      bottomTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                        showTitles: true,
+                        getTitlesWidget: (val, meta) {
+                          if (val < 0 || val.toInt() >= options.length) {
+                            return const SizedBox();
+                          }
+                          final text = options.keys.elementAt(val.toInt());
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 12.0),
+                            child: Text(
+                              text.length > 8
+                                  ? "${text.substring(0, 8)}.."
+                                  : text,
+                              style: TextStyle(
+                                  fontSize: 11, color: _secondaryColor),
+                            ),
+                          );
+                        },
+                        reservedSize: 30,
+                      )),
+                    ),
+                    barTouchData: BarTouchData(
+                      touchTooltipData: BarTouchTooltipData(
+                        getTooltipColor: (_) => Colors.white,
+                        tooltipBorder: BorderSide(color: _borderColor),
+                        tooltipPadding: const EdgeInsets.all(8),
+                        tooltipMargin: 8,
+                        getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                          if (group.x < 0 || group.x >= options.length) {
+                            return null;
+                          }
+                          final optionName = options.keys.elementAt(group.x);
+                          return BarTooltipItem(
+                            '$optionName\n',
+                            TextStyle(
+                                color: _secondaryColor,
+                                fontWeight: FontWeight.w500,
+                                fontSize: 12),
+                            children: <TextSpan>[
+                              TextSpan(
+                                text: '${rod.toY.toInt()} Votes',
+                                style: TextStyle(
+                                    color: _primaryColor,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ),
               ),
-            ),
-        ],
-      ),
+              Container(
+                margin: const EdgeInsets.only(top: 24),
+                padding: const EdgeInsets.only(top: 16),
+                decoration: BoxDecoration(
+                  border: Border(top: BorderSide(color: _borderColor)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text("total_responses".tr(),
+                        style: TextStyle(color: _secondaryColor, fontSize: 14)),
+                    Text("$totalVotes",
+                        style: TextStyle(
+                            color: _primaryColor,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
