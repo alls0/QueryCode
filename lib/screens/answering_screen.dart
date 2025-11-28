@@ -1,8 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // EKLENDİ
-import 'package:uuid/uuid.dart'; // EKLENDİ
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
 import 'thank_you_screen.dart';
 import 'package:easy_localization/easy_localization.dart';
 
@@ -25,7 +25,14 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
   String _errorMessage = '';
   List<dynamic> _questions = [];
   int _currentQuestionIndex = 0;
-  String? _selectedAnswer;
+
+  // Cevap Yönetimi
+  String? _selectedAnswer; // Seçilen şıkkın metni veya özel kod
+  final TextEditingController _otherAnswerController =
+      TextEditingController(); // Açık uçlu cevap için
+  static const String _otherOptionKey =
+      '__OTHER_OPTION_SELECTED__'; // Sabit anahtar
+
   final List<Map<String, String>> _userAnswers = [];
 
   final PageController _mediaPageController = PageController();
@@ -48,12 +55,12 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
   @override
   void dispose() {
     _mediaPageController.dispose();
+    _otherAnswerController.dispose();
     super.dispose();
   }
 
   Future<void> _fetchEventData() async {
     try {
-      // 1. Cihaz ID'sini Al veya Oluştur
       final prefs = await SharedPreferences.getInstance();
       _deviceId = prefs.getString('device_unique_id');
 
@@ -62,7 +69,6 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
         await prefs.setString('device_unique_id', _deviceId!);
       }
 
-      // 2. Etkinlik Verisini Çek
       final docSnapshot = await FirebaseFirestore.instance
           .collection('events')
           .doc(widget.eventId)
@@ -71,12 +77,10 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
       if (docSnapshot.exists) {
         final data = docSnapshot.data()!;
 
-        // 3. KONTROL: Cihaz daha önce oy vermiş mi?
         final List<dynamic> votedDevices = data['votedDevices'] ?? [];
         if (votedDevices.contains(_deviceId)) {
           setState(() {
-            _errorMessage =
-                "Bu etkinlikte daha önce oy kullandınız."; // "already_voted_error".tr() eklenebilir
+            _errorMessage = "Bu etkinlikte daha önce oy kullandınız.";
             _isLoading = false;
           });
           return;
@@ -101,16 +105,27 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
   }
 
   void _submitAndGoToNext() async {
+    // Cevabı belirle: Eğer "Diğer" seçiliyse textfield'dan al, değilse seçili şıkkı al
+    String finalAnswer = _selectedAnswer == _otherOptionKey
+        ? _otherAnswerController.text.trim()
+        : _selectedAnswer!;
+
+    // Boş cevap kontrolü (Açık uçlu seçip boş bırakırsa)
+    if (finalAnswer.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Lütfen bir cevap yazın.")),
+      );
+      return;
+    }
+
     _userAnswers.add({
       'question': _questions[_currentQuestionIndex]['questionText'],
-      'answer': _selectedAnswer!,
+      'answer': finalAnswer,
     });
 
     if (_currentQuestionIndex >= _questions.length - 1) {
-      // --- SON SORU: GÖNDERME İŞLEMİ ---
-      setState(() {
-        _isLoading = true;
-      });
+      // --- SON SORU: GÖNDERME ---
+      setState(() => _isLoading = true);
 
       try {
         final String respondentName = widget.nickname?.trim() ??
@@ -119,16 +134,13 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
         final eventRef =
             FirebaseFirestore.instance.collection('events').doc(widget.eventId);
 
-        // Transaction ile güvenli kayıt (Çakışma ve mükerrer oy önleme)
         await FirebaseFirestore.instance.runTransaction((transaction) async {
           DocumentSnapshot snapshot = await transaction.get(eventRef);
-
           if (!snapshot.exists) throw Exception("Event not found");
 
           final data = snapshot.data() as Map<String, dynamic>;
           final List<dynamic> votedDevices = data['votedDevices'] ?? [];
 
-          // Son kontrol: İşlem anında başka bir yerden oy kullanıldı mı?
           if (votedDevices.contains(_deviceId)) {
             throw Exception("Already voted");
           }
@@ -148,32 +160,28 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
       } catch (e) {
         if (mounted) {
           String errorMsg = "answer_error_submit".tr();
-          if (e.toString().contains("Already voted")) {
+          if (e.toString().contains("Already voted"))
             errorMsg = "Daha önce oy kullandınız!";
-          }
 
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(errorMsg)),
-          );
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text(errorMsg)));
 
-          // Eğer hata "Zaten oy kullanıldı" ise ekranı kilitle
           if (e.toString().contains("Already voted")) {
             setState(() {
               _errorMessage = "Daha önce oy kullandınız!";
               _isLoading = false;
             });
           } else {
-            setState(() {
-              _isLoading = false;
-            });
+            setState(() => _isLoading = false);
           }
         }
       }
     } else {
-      // --- SONRAKİ SORUYA GEÇ ---
+      // --- SONRAKİ SORU ---
       setState(() {
         _currentQuestionIndex++;
         _selectedAnswer = null;
+        _otherAnswerController.clear(); // Controller'ı temizle
         _currentMediaIndex = 0;
       });
     }
@@ -189,14 +197,15 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
         ? (currentQuestion['attachments'] as List<dynamic>? ?? [])
         : [];
 
-    // Eski veri yapısı desteği
-    if (rawAttachments.isEmpty &&
-        currentQuestion != null &&
-        currentQuestion['attachmentPath'] != null) {
-      rawAttachments.add({
-        'path': currentQuestion['attachmentPath'],
-        'type': currentQuestion['attachmentType'] ?? 'image'
-      });
+    // Açık uçlu izin veriliyor mu?
+    final bool allowOpenEnded = currentQuestion != null
+        ? (currentQuestion['allowOpenEnded'] ?? false)
+        : false;
+
+    // Seçenekler listesini hazırla
+    List<dynamic> options = [];
+    if (currentQuestion != null && currentQuestion['options'] != null) {
+      options = List.from(currentQuestion['options']);
     }
 
     return Scaffold(
@@ -205,8 +214,7 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
         backgroundColor: _bgColor,
         elevation: 0,
         centerTitle: true,
-        automaticallyImplyLeading:
-            false, // Geri butonunu kaldır (Zorunlu değil ama anket ortasında çıkmamaları için)
+        automaticallyImplyLeading: false,
         iconTheme: IconThemeData(color: _primaryColor),
         title: _isLoading
             ? null
@@ -222,34 +230,15 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
           ? Center(child: CircularProgressIndicator(color: _primaryColor))
           : _errorMessage.isNotEmpty
               ? Center(
-                  child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.error_outline_rounded,
-                        size: 50, color: Colors.red.shade300),
-                    const SizedBox(height: 16),
-                    Text(_errorMessage,
-                        style: const TextStyle(
-                            color: Colors.black87,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 20),
-                    ElevatedButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: ElevatedButton.styleFrom(
-                          backgroundColor: _primaryColor,
-                          foregroundColor: Colors.white),
-                      child: const Text("Geri Dön"),
-                    )
-                  ],
-                ))
+                  child: Text(_errorMessage,
+                      style: const TextStyle(color: Colors.red)))
               : Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       const SizedBox(height: 10),
-                      // Soru Kartı
+                      // Soru Metni
                       Container(
                         padding: const EdgeInsets.all(24),
                         decoration: BoxDecoration(
@@ -258,10 +247,7 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
                           border: Border.all(color: Colors.grey.shade200),
                         ),
                         child: Text(
-                          currentQuestion != null
-                              ? (currentQuestion['questionText'] ??
-                                  "answer_question_not_found".tr())
-                              : "",
+                          currentQuestion?['questionText'] ?? "",
                           textAlign: TextAlign.center,
                           style: TextStyle(
                               fontSize: 20,
@@ -271,181 +257,165 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
                       ),
                       const SizedBox(height: 20),
 
-                      // Medya Alanı
+                      // Medya Alanı (Varsa)
                       if (rawAttachments.isNotEmpty) ...[
-                        Container(
+                        SizedBox(
                           height: 250,
-                          width: double.infinity,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: Colors.grey.shade200),
-                          ),
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(20),
-                            child: Stack(
-                              alignment: Alignment.bottomCenter,
-                              children: [
-                                PageView.builder(
-                                  controller: _mediaPageController,
-                                  itemCount: rawAttachments.length,
-                                  onPageChanged: (idx) {
-                                    setState(() => _currentMediaIndex = idx);
-                                  },
-                                  itemBuilder: (context, idx) {
-                                    final attachment = rawAttachments[idx];
-                                    final path =
-                                        attachment['path']?.toString() ?? '';
-                                    final type = attachment['type'];
-
-                                    if (path.isEmpty)
-                                      return _buildErrorWidget();
-
-                                    final bool isNetworkUrl =
-                                        path.startsWith('http');
-
-                                    if (type == 'image') {
-                                      if (isNetworkUrl) {
-                                        return Image.network(path,
-                                            fit: BoxFit.contain, loadingBuilder:
-                                                (context, child,
-                                                    loadingProgress) {
-                                          if (loadingProgress == null)
-                                            return child;
-                                          return Center(
-                                              child: CircularProgressIndicator(
-                                                  color: _primaryColor,
-                                                  value: loadingProgress
-                                                              .expectedTotalBytes !=
-                                                          null
-                                                      ? loadingProgress
-                                                              .cumulativeBytesLoaded /
-                                                          loadingProgress
-                                                              .expectedTotalBytes!
-                                                      : null));
-                                        }, errorBuilder:
-                                                (context, error, stackTrace) {
-                                          return _buildErrorWidget();
-                                        });
-                                      } else {
-                                        return Image.file(
-                                          File(path),
-                                          fit: BoxFit.contain,
-                                          errorBuilder:
-                                              (context, error, stackTrace) =>
-                                                  _buildErrorWidget(),
-                                        );
-                                      }
-                                    } else {
-                                      return Center(
-                                        child: Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Icon(
-                                                Icons.insert_drive_file_rounded,
-                                                size: 50,
-                                                color: _primaryColor),
-                                            const SizedBox(height: 12),
-                                            Padding(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                      horizontal: 20),
-                                              child: Text(
-                                                path
-                                                    .split('/')
-                                                    .last
-                                                    .split('?')
-                                                    .first,
-                                                textAlign: TextAlign.center,
-                                                style: const TextStyle(
-                                                    fontWeight:
-                                                        FontWeight.w600),
-                                              ),
-                                            )
-                                          ],
-                                        ),
-                                      );
-                                    }
-                                  },
-                                ),
-                                if (rawAttachments.length > 1)
-                                  Padding(
-                                    padding: const EdgeInsets.only(bottom: 12),
-                                    child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: List.generate(
-                                          rawAttachments.length, (idx) {
-                                        return Container(
-                                          margin: const EdgeInsets.symmetric(
-                                              horizontal: 4),
-                                          width: 8,
-                                          height: 8,
-                                          decoration: BoxDecoration(
-                                            shape: BoxShape.circle,
-                                            color: _currentMediaIndex == idx
-                                                ? _primaryColor
-                                                : Colors.grey.shade300,
-                                          ),
-                                        );
-                                      }),
-                                    ),
-                                  ),
-                              ],
+                            child: PageView.builder(
+                              controller: _mediaPageController,
+                              itemCount: rawAttachments.length,
+                              onPageChanged: (idx) =>
+                                  setState(() => _currentMediaIndex = idx),
+                              itemBuilder: (context, idx) {
+                                final attachment = rawAttachments[idx];
+                                final path =
+                                    attachment['path']?.toString() ?? '';
+                                if (attachment['type'] == 'image') {
+                                  return Image.network(path,
+                                      fit: BoxFit.contain);
+                                } else {
+                                  return const Center(
+                                      child: Icon(Icons.insert_drive_file,
+                                          size: 50));
+                                }
+                              },
                             ),
                           ),
                         ),
                         const SizedBox(height: 20),
                       ],
 
-                      // Seçenekler
+                      // Seçenekler Listesi
                       Expanded(
                         child: SingleChildScrollView(
                           child: Column(
                             children: [
-                              if (currentQuestion != null &&
-                                  currentQuestion['options'] != null)
-                                ...((currentQuestion['options']
-                                        as List<dynamic>)
-                                    .map((option) {
-                                  final bool isSelected =
-                                      _selectedAnswer == option;
-                                  return Padding(
-                                    padding:
-                                        const EdgeInsets.only(bottom: 12.0),
-                                    child: InkWell(
-                                      onTap: () => setState(
-                                          () => _selectedAnswer = option),
-                                      borderRadius: BorderRadius.circular(16),
-                                      child: Container(
-                                        width: double.infinity,
-                                        padding: const EdgeInsets.symmetric(
-                                            vertical: 18, horizontal: 16),
-                                        decoration: BoxDecoration(
-                                          color: isSelected
-                                              ? _primaryColor
-                                              : _surfaceColor,
-                                          borderRadius:
-                                              BorderRadius.circular(16),
-                                          border: Border.all(
-                                              color: isSelected
-                                                  ? _primaryColor
-                                                  : Colors.grey.shade300),
-                                        ),
-                                        child: Text(
-                                          option,
-                                          style: TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.w600,
-                                              color: isSelected
-                                                  ? Colors.white
-                                                  : _primaryColor),
-                                          textAlign: TextAlign.center,
-                                        ),
+                              // 1. Standart Seçenekler
+                              ...options.map((option) {
+                                final bool isSelected =
+                                    _selectedAnswer == option;
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 12.0),
+                                  child: InkWell(
+                                    onTap: () => setState(
+                                        () => _selectedAnswer = option),
+                                    borderRadius: BorderRadius.circular(16),
+                                    child: Container(
+                                      width: double.infinity,
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 18, horizontal: 16),
+                                      decoration: BoxDecoration(
+                                        color: isSelected
+                                            ? _primaryColor
+                                            : _surfaceColor,
+                                        borderRadius: BorderRadius.circular(16),
+                                        border: Border.all(
+                                            color: isSelected
+                                                ? _primaryColor
+                                                : Colors.grey.shade300),
+                                      ),
+                                      child: Text(
+                                        option,
+                                        style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600,
+                                            color: isSelected
+                                                ? Colors.white
+                                                : _primaryColor),
+                                        textAlign: TextAlign.center,
                                       ),
                                     ),
-                                  );
-                                }).toList()),
+                                  ),
+                                );
+                              }).toList(),
+
+                              // 2. Açık Uçlu (Diğer) Seçeneği
+                              if (allowOpenEnded)
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 12.0),
+                                  child: Column(
+                                    children: [
+                                      InkWell(
+                                        onTap: () => setState(() =>
+                                            _selectedAnswer = _otherOptionKey),
+                                        borderRadius: BorderRadius.circular(16),
+                                        child: Container(
+                                          width: double.infinity,
+                                          padding: const EdgeInsets.symmetric(
+                                              vertical: 18, horizontal: 16),
+                                          decoration: BoxDecoration(
+                                            color: _selectedAnswer ==
+                                                    _otherOptionKey
+                                                ? _surfaceColor
+                                                : _surfaceColor,
+                                            borderRadius:
+                                                BorderRadius.circular(16),
+                                            border: Border.all(
+                                                color: _selectedAnswer ==
+                                                        _otherOptionKey
+                                                    ? _primaryColor
+                                                    : Colors.grey.shade300,
+                                                width: _selectedAnswer ==
+                                                        _otherOptionKey
+                                                    ? 2
+                                                    : 1),
+                                          ),
+                                          child: Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              Icon(Icons.edit_note_rounded,
+                                                  color: _selectedAnswer ==
+                                                          _otherOptionKey
+                                                      ? _primaryColor
+                                                      : Colors.grey),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                "Diğer (Kendi cevabını yaz)",
+                                                style: TextStyle(
+                                                    fontSize: 16,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: _selectedAnswer ==
+                                                            _otherOptionKey
+                                                        ? _primaryColor
+                                                        : Colors.grey.shade700),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                      // Eğer Diğer seçiliyse TextField göster
+                                      if (_selectedAnswer == _otherOptionKey)
+                                        Padding(
+                                          padding:
+                                              const EdgeInsets.only(top: 10.0),
+                                          child: TextField(
+                                            controller: _otherAnswerController,
+                                            autofocus: true,
+                                            decoration: InputDecoration(
+                                              hintText:
+                                                  "Cevabınızı buraya yazın...",
+                                              filled: true,
+                                              fillColor: Colors.white,
+                                              border: OutlineInputBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(16),
+                                                  borderSide: BorderSide(
+                                                      color: _primaryColor)),
+                                              focusedBorder: OutlineInputBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(16),
+                                                  borderSide: BorderSide(
+                                                      color: _primaryColor,
+                                                      width: 2)),
+                                            ),
+                                          ),
+                                        )
+                                    ],
+                                  ),
+                                ),
                             ],
                           ),
                         ),
@@ -459,7 +429,6 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: _primaryColor,
                             foregroundColor: Colors.white,
-                            elevation: 0,
                             padding: const EdgeInsets.symmetric(vertical: 20),
                             shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(20)),
@@ -480,18 +449,6 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
                     ],
                   ),
                 ),
-    );
-  }
-
-  Widget _buildErrorWidget() {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(Icons.broken_image_rounded, size: 40, color: Colors.grey.shade400),
-        const SizedBox(height: 8),
-        Text("Görsel yüklenemedi",
-            style: TextStyle(color: Colors.grey.shade500, fontSize: 14)),
-      ],
     );
   }
 }

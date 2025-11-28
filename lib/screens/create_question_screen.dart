@@ -1,12 +1,13 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+// import 'package:shared_preferences/shared_preferences.dart'; // Artık gerek yok
 import 'qr_result_screen.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:path/path.dart' as path_utils;
 
 // --- MODEL ---
@@ -16,11 +17,13 @@ class QuestionModel {
   TextEditingController textController;
   List<TextEditingController> optionControllers;
   List<Map<String, String>> attachments;
+  bool allowOpenEnded; // YENİ: Açık uçlu cevap izni
 
   QuestionModel({
     this.questionText = '',
     required this.options,
     List<Map<String, String>>? attachments,
+    this.allowOpenEnded = false, // Varsayılan kapalı
   })  : textController = TextEditingController(text: questionText),
         optionControllers =
             options.map((e) => TextEditingController(text: e)).toList(),
@@ -36,7 +39,7 @@ class CreateQuestionScreen extends StatefulWidget {
 class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
   // --- LİMİTLER ---
   static const int _maxQuestions = 10;
-  static const int _maxOptions = 10;
+  static const int _maxOptions = 5;
   static const int _maxAttachments = 3;
 
   late List<QuestionModel> _questions;
@@ -47,8 +50,7 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
   Duration _selectedDuration = Duration.zero;
   bool _isNicknameRequired = true;
   bool _isLoading = false;
-  final String _loadingText =
-      "..."; // Sadeleştirilmiş yükleme metni
+  final String _loadingText = "Oluşturuluyor...";
 
   final ImagePicker _picker = ImagePicker();
 
@@ -82,7 +84,6 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
 
   // --- MEDYA İŞLEMLERİ ---
   Future<void> _pickImage(int index, ImageSource source) async {
-    // LİMİT KONTROLÜ
     if (_questions[index].attachments.length >= _maxAttachments) {
       _showWarning("Maksimum $_maxAttachments görsel ekleyebilirsiniz.");
       return;
@@ -103,7 +104,6 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
   }
 
   Future<void> _pickFile(int index) async {
-    // LİMİT KONTROLÜ
     if (_questions[index].attachments.length >= _maxAttachments) {
       _showWarning("Maksimum $_maxAttachments dosya ekleyebilirsiniz.");
       return;
@@ -179,7 +179,6 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
   }
 
   void _addNewQuestion() {
-    // LİMİT KONTROLÜ
     if (_questions.length >= _maxQuestions) {
       _showWarning("En fazla $_maxQuestions soru oluşturabilirsiniz.");
       return;
@@ -226,14 +225,7 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
     });
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final List<String> savedEvents =
-          prefs.getStringList('saved_events') ?? [];
-
-      if (savedEvents.length >= 15) {
-        if (mounted) _showWarning("memory_full".tr());
-        return;
-      }
+      final user = FirebaseAuth.instance.currentUser;
 
       List<Map<String, dynamic>> processedQuestions = [];
 
@@ -265,14 +257,16 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
           'questionText': q.questionText,
           'options': q.options,
           'attachments': uploadedAttachments,
+          'allowOpenEnded': q.allowOpenEnded, // YENİ: Veritabanına kaydet
         });
       }
 
       final eventData = {
         'createdAt': Timestamp.now(),
+        'creatorId': user?.uid,
         'eventTitle': _eventTitleController.text.trim().isNotEmpty
             ? _eventTitleController.text.trim()
-            : 'events_prefix'.tr() + (savedEvents.length + 1).toString(),
+            : 'events_prefix'.tr(),
         'durationInSeconds': _selectedDuration.inSeconds,
         'isNicknameRequired': _isNicknameRequired,
         'questions': processedQuestions,
@@ -282,9 +276,6 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
       final docRef =
           await FirebaseFirestore.instance.collection('events').add(eventData);
       final eventId = docRef.id;
-
-      if (!savedEvents.contains(eventId)) savedEvents.add(eventId);
-      await prefs.setStringList('saved_events', savedEvents);
 
       if (mounted) {
         Navigator.pushReplacement(
@@ -358,6 +349,7 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
             child: ListView(
               padding: const EdgeInsets.all(24),
               children: [
+                // SORU METNİ
                 TextField(
                     controller: question.textController,
                     maxLines: 3,
@@ -380,7 +372,7 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
                                 color: _primaryDark.withOpacity(0.9))))),
                 const SizedBox(height: 16),
 
-                // --- MEDYA LİSTESİ (ÖNİZLEME) ---
+                // --- MEDYA LİSTESİ ---
                 if (question.attachments.isNotEmpty)
                   SizedBox(
                     height: 100,
@@ -470,6 +462,7 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
 
                 const SizedBox(height: 24),
 
+                // SEÇENEKLER BAŞLIĞI
                 Text("create_options_title".tr(),
                     style: TextStyle(
                         color: _softGrey,
@@ -477,64 +470,50 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
                         fontSize: 12,
                         letterSpacing: 1)),
                 const SizedBox(height: 12),
-...List.generate(question.optionControllers.length, (optIndex) {
-  return Padding(
-    padding: const EdgeInsets.only(bottom: 12),
-    child: Row(
-      children: [
-        // Sol taraftaki yuvarlak işaret
-        Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(
-                color: _primaryDark.withOpacity(0.3),
-                shape: BoxShape.circle)),
-        const SizedBox(width: 12),
 
-        // Seçenek Metin Alanı
-        Expanded(
-            child: TextField(
-                controller: question.optionControllers[optIndex],
-                style: TextStyle(color: _primaryDark),
-                decoration: InputDecoration(
-                    hintText: "create_option_hint".tr(),
-                    hintStyle: TextStyle(
-                        color: _softGrey.withOpacity(0.5)),
-                    border: UnderlineInputBorder(
-                        borderSide: BorderSide(
-                            color: Colors.grey.shade200)),
-                    enabledBorder: UnderlineInputBorder(
-                        borderSide: BorderSide(
-                            color: Colors.grey.shade200)),
-                    focusedBorder: UnderlineInputBorder(
-                        borderSide:
-                            BorderSide(color: _primaryDark))))),
+                // SEÇENEK LİSTESİ
+                ...List.generate(question.optionControllers.length, (optIndex) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Row(
+                      children: [
+                        Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                                color: _primaryDark.withOpacity(0.3),
+                                shape: BoxShape.circle)),
+                        const SizedBox(width: 12),
+                        Expanded(
+                            child: TextField(
+                                controller:
+                                    question.optionControllers[optIndex],
+                                style: TextStyle(color: _primaryDark),
+                                decoration: InputDecoration(
+                                    hintText: "create_option_hint".tr(),
+                                    hintStyle: TextStyle(
+                                        color: _softGrey.withOpacity(0.5)),
+                                    border: UnderlineInputBorder(
+                                        borderSide: BorderSide(
+                                            color: Colors.grey.shade200)),
+                                    enabledBorder: UnderlineInputBorder(
+                                        borderSide: BorderSide(
+                                            color: Colors.grey.shade200)),
+                                    focusedBorder: UnderlineInputBorder(
+                                        borderSide:
+                                            BorderSide(color: _primaryDark))))),
+                      ],
+                    ),
+                  );
+                }),
 
-        // --- SİLME BUTONU ---
-        // Sadece 2'den fazla seçenek varsa gösterilir
-        if (question.optionControllers.length > 2)
-          IconButton(
-            icon: Icon(Icons.delete_outline_rounded,
-                color: Colors.red.shade300, size: 22),
-            onPressed: () {
-              setState(() {
-                // Controller'ı temizle ve listeden kaldır
-                question.optionControllers[optIndex].dispose();
-                question.optionControllers.removeAt(optIndex);
-                question.options.removeAt(optIndex);
-              });
-            },
-          ),
-      ],
-    ),
-  );
-}),
                 const SizedBox(height: 8),
+
+                // SEÇENEK EKLE BUTONU
                 Align(
                     alignment: Alignment.centerLeft,
                     child: TextButton.icon(
                         onPressed: () {
-                          // LİMİT KONTROLÜ
                           if (question.options.length >= _maxOptions) {
                             _showWarning(
                                 "En fazla $_maxOptions seçenek ekleyebilirsiniz.");
@@ -555,6 +534,62 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
                             foregroundColor: _primaryDark,
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 16, vertical: 12)))),
+
+                // --- YENİ BÖLÜM: AÇIK UÇLU SEÇENEK ---
+                const SizedBox(height: 16),
+                Divider(color: Colors.grey.shade100, height: 24),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  activeColor: _primaryBlue,
+                  title: Text("Diğer (Açık Uçlu) Seçeneği",
+                      style: TextStyle(
+                          color: _primaryDark,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14)),
+                  subtitle: Text(
+                      "Katılımcılar seçenekler dışında kendi cevabını yazabilir.",
+                      style: TextStyle(color: _softGrey, fontSize: 12)),
+                  value: question.allowOpenEnded,
+                  onChanged: (val) {
+                    setState(() {
+                      question.allowOpenEnded = val;
+                    });
+                  },
+                ),
+
+                // Önizleme (Aktifse görünür)
+                if (question.allowOpenEnded)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8, bottom: 20),
+                    child: Row(
+                      children: [
+                        Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                                border: Border.all(
+                                    color: _primaryDark.withOpacity(0.3),
+                                    width: 1.5),
+                                shape: BoxShape.circle)),
+                        const SizedBox(width: 12),
+                        Expanded(
+                            child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 12),
+                                decoration: BoxDecoration(
+                                    color: Colors.grey.shade50,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                        color: Colors.grey.shade200)),
+                                child: Text(
+                                    "Diğer... (Katılımcı kendi cevabını yazar)",
+                                    style: TextStyle(
+                                        color: _softGrey,
+                                        fontStyle: FontStyle.italic,
+                                        fontSize: 13)))),
+                      ],
+                    ),
+                  ),
               ],
             ),
           ),

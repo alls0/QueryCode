@@ -65,7 +65,7 @@ class _NicknameEntryScreenState extends State<NicknameEntryScreen> {
                             offset: const Offset(0, 10))
                       ],
                     ),
-                    child: Image.asset('assets/images/logo.png',
+                    child: Image.asset('assets/images/logo4.png',
                         width: 80, height: 80),
                   ),
                   const SizedBox(height: 32),
