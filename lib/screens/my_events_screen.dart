@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // Sadece favoriler için kaldı
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // EKLENDİ
 import 'qr_result_screen.dart';
 import 'package:easy_localization/easy_localization.dart';
 
@@ -13,7 +14,6 @@ class MyEventsScreen extends StatefulWidget {
 
 class _MyEventsScreenState extends State<MyEventsScreen> {
   // --- VERİ DEĞİŞKENLERİ ---
-  List<DocumentSnapshot> _allEvents = [];
   List<DocumentSnapshot> _filteredEvents = [];
   List<String> _favoriteEventIds = [];
   bool _isLoading = true;
@@ -22,7 +22,6 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
   bool _showOnlyFavorites = false;
   bool _sortNewestFirst = true;
 
-  // --- MODERN TASARIM SABİTLERİ (QR RESULT İLE AYNI) ---
   final Color _backgroundColor = const Color(0xFFF8FAFC);
   final Color _primaryColor = const Color(0xFF2D3748);
   final Color _secondaryColor = const Color(0xFF718096);
@@ -34,84 +33,75 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
     _loadData();
   }
 
-  // --- VERİ YÜKLEME ---
+  // --- YENİ VERİ YÜKLEME MANTIĞI (CLOUD) ---
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
 
-    final prefs = await SharedPreferences.getInstance();
-    final List<String> eventIds = prefs.getStringList('saved_events') ?? [];
-    _favoriteEventIds = prefs.getStringList('favorite_events') ?? [];
-
-    if (eventIds.isEmpty) {
-      setState(() {
-        _allEvents = [];
-        _filteredEvents = [];
-        _isLoading = false;
-      });
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      // Güvenlik önlemi: Eğer kullanıcı yoksa boş dön.
+      setState(() => _isLoading = false);
       return;
     }
 
-    final List<DocumentSnapshot> events = [];
-    for (String id in eventIds) {
-      try {
-        final doc =
-            await FirebaseFirestore.instance.collection('events').doc(id).get();
-        if (doc.exists) {
-          events.add(doc);
-        }
-      } catch (e) {
-        debugPrint("Etkinlik yüklenemedi: $id");
+    final prefs = await SharedPreferences.getInstance();
+    _favoriteEventIds = prefs.getStringList('favorite_events') ?? [];
+
+    try {
+      // SADECE BU KULLANICININ OLUŞTURDUĞU ETKİNLİKLERİ ÇEK
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('events')
+          .where('creatorId', isEqualTo: user.uid)
+          .get();
+
+      if (mounted) {
+        setState(() {
+          // Ham veriyi al
+          List<DocumentSnapshot> allDocs = querySnapshot.docs;
+
+          // Filtreleri Uygula (Favori ve Sıralama)
+          // 1. Favori Filtresi
+          if (_showOnlyFavorites) {
+            allDocs = allDocs
+                .where((doc) => _favoriteEventIds.contains(doc.id))
+                .toList();
+          }
+
+          // 2. Sıralama
+          allDocs.sort((a, b) {
+            Timestamp timeA = (a.data() as Map<String, dynamic>)['createdAt'] ??
+                Timestamp(0, 0);
+            Timestamp timeB = (b.data() as Map<String, dynamic>)['createdAt'] ??
+                Timestamp(0, 0);
+            return _sortNewestFirst
+                ? timeB.compareTo(timeA)
+                : timeA.compareTo(timeB);
+          });
+
+          _filteredEvents = allDocs;
+          _isLoading = false;
+        });
       }
+    } catch (e) {
+      debugPrint("Etkinlikler yüklenemedi: $e");
+      if (mounted) setState(() => _isLoading = false);
     }
-
-    if (mounted) {
-      setState(() {
-        _allEvents = events;
-        _applyFilters();
-        _isLoading = false;
-      });
-    }
-  }
-
-  // --- FİLTRELEME MANTIĞI ---
-  void _applyFilters() {
-    List<DocumentSnapshot> tempEvents = List.from(_allEvents);
-
-    if (_showOnlyFavorites) {
-      tempEvents = tempEvents
-          .where((doc) => _favoriteEventIds.contains(doc.id))
-          .toList();
-    }
-
-    tempEvents.sort((a, b) {
-      Timestamp timeA =
-          (a.data() as Map<String, dynamic>)['createdAt'] ?? Timestamp(0, 0);
-      Timestamp timeB =
-          (b.data() as Map<String, dynamic>)['createdAt'] ?? Timestamp(0, 0);
-      return _sortNewestFirst ? timeB.compareTo(timeA) : timeA.compareTo(timeB);
-    });
-
-    setState(() {
-      _filteredEvents = tempEvents;
-    });
   }
 
   // --- SİLME İŞLEMİ ---
   Future<void> _deleteEvent(String eventId) async {
-    final prefs = await SharedPreferences.getInstance();
-    List<String> savedEvents = prefs.getStringList('saved_events') ?? [];
-    savedEvents.remove(eventId);
-    await prefs.setStringList('saved_events', savedEvents);
+    // Firestore'dan sil
+    await FirebaseFirestore.instance.collection('events').doc(eventId).delete();
 
+    // Favorilerden sil
+    final prefs = await SharedPreferences.getInstance();
     if (_favoriteEventIds.contains(eventId)) {
       _favoriteEventIds.remove(eventId);
       await prefs.setStringList('favorite_events', _favoriteEventIds);
     }
 
-    setState(() {
-      _allEvents.removeWhere((doc) => doc.id == eventId);
-      _applyFilters();
-    });
+    // Listeyi yenile
+    _loadData();
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -169,9 +159,10 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
       } else {
         _favoriteEventIds.add(eventId);
       }
-      _applyFilters();
     });
     await prefs.setStringList('favorite_events', _favoriteEventIds);
+    // Listeyi tekrar yükle/filtrele
+    _loadData();
   }
 
   // --- FİLTRE DİYALOĞU ---
@@ -210,7 +201,8 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
                   value: _showOnlyFavorites,
                   onChanged: (val) {
                     setModalState(() => _showOnlyFavorites = val);
-                    setState(() => _applyFilters());
+                    this.setState(() => _showOnlyFavorites = val);
+                    _loadData(); // Yeniden yükle/filtrele
                   },
                 ),
                 const SizedBox(height: 8),
@@ -242,7 +234,8 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
                     onChanged: (val) {
                       if (val != null) {
                         setModalState(() => _sortNewestFirst = val);
-                        setState(() => _applyFilters());
+                        this.setState(() => _sortNewestFirst = val);
+                        _loadData();
                       }
                     },
                   ),
@@ -256,14 +249,12 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
     );
   }
 
-  // --- MODERN HEADER (QR Result Ekranındaki ile aynı stil) ---
   Widget _buildHeader() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // 1. Geri Butonu
           GestureDetector(
             onTap: () => Navigator.pop(context),
             child: Container(
@@ -284,8 +275,6 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
                   size: 20, color: _primaryColor),
             ),
           ),
-
-          // 2. Başlık
           Column(
             children: [
               Text(
@@ -308,8 +297,6 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
               ),
             ],
           ),
-
-          // 3. Filtre Butonu (Sağda, Geri butonu ile aynı stilde)
           GestureDetector(
             onTap: _showFilterDialog,
             child: Container(
@@ -335,7 +322,6 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
     );
   }
 
-  // --- ETKİNLİK KARTI ---
   Widget _buildEventCard(DocumentSnapshot eventDoc, int index) {
     final eventData = eventDoc.data() as Map<String, dynamic>;
     final eventId = eventDoc.id;
@@ -374,19 +360,16 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
               children: [
-                // İkon
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFEDF2F7), // Hafif gri arka plan
+                    color: const Color(0xFFEDF2F7),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(Icons.qr_code_2_rounded,
                       color: _primaryColor, size: 24),
                 ),
                 const SizedBox(width: 16),
-
-                // Metinler
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -413,8 +396,6 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
                     ],
                   ),
                 ),
-
-                // Aksiyonlar (Favori & Sil)
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -455,10 +436,7 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // 1. MODERN HEADER
             _buildHeader(),
-
-            // 2. İÇERİK
             Expanded(
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
@@ -488,26 +466,6 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
                         )
                       : Column(
                           children: [
-                            // LİMİT BİLGİSİ
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 24, vertical: 8),
-                              child: Align(
-                                alignment: Alignment.centerRight,
-                                child: Text(
-                                  "${_filteredEvents.length} / 15 ${"event_limit_label".tr()}",
-                                  style: TextStyle(
-                                    color: _filteredEvents.length >= 15
-                                        ? Colors.red
-                                        : _secondaryColor,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ),
-
-                            // LİSTE
                             Expanded(
                               child: ListView.builder(
                                 padding:

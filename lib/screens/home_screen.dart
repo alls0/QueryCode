@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // EKLENDİ
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // EKLENDİ
 import 'create_question_screen.dart';
 import 'qr_scanner_screen.dart';
 import 'my_events_screen.dart';
+import 'auth_screen.dart'; // EKLENDİ
 import 'package:easy_localization/easy_localization.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
-// --- GÜNCELLENMİŞ FEEDBACK FONKSİYONU ---
+  // --- Geri Bildirim Modal (Mevcut kod aynen korundu) ---
   void _showFeedbackModal(BuildContext context) {
     // Tasarım Renkleri
     final Color primaryDark = const Color(0xFF1A202C);
@@ -20,7 +22,6 @@ class HomeScreen extends StatelessWidget {
     String selectedType = 'Öneri';
     List<String> feedbackTypes = ['Öneri', 'Hata', 'Diğer'];
 
-    // YENİ EKLENEN DEĞİŞKEN: Hata Mesajı Kontrolü
     String? inputErrorText;
     bool isLoading = false;
 
@@ -46,7 +47,6 @@ class HomeScreen extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Başlık ve Kapatma Butonu
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -65,8 +65,6 @@ class HomeScreen extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 20),
-
-                    // Kategori Seçimi (Chips)
                     Text("Konu Nedir?",
                         style: TextStyle(
                             fontWeight: FontWeight.w600, color: primaryDark)),
@@ -101,13 +99,10 @@ class HomeScreen extends StatelessWidget {
                       }).toList(),
                     ),
                     const SizedBox(height: 24),
-
-                    // Mesaj Alanı
                     TextField(
                       controller: feedbackController,
                       maxLength: 500,
                       maxLines: 4,
-                      // Kullanıcı yazmaya başlayınca hata mesajını kaldır
                       onChanged: (val) {
                         if (inputErrorText != null) {
                           setModalState(() => inputErrorText = null);
@@ -118,7 +113,6 @@ class HomeScreen extends StatelessWidget {
                         hintStyle: TextStyle(color: Colors.grey.shade400),
                         filled: true,
                         fillColor: bgLight,
-                        // --- HATA MESAJI BURADA GÖSTERİLİR ---
                         errorText: inputErrorText,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
@@ -129,7 +123,6 @@ class HomeScreen extends StatelessWidget {
                           borderSide:
                               BorderSide(color: primaryBlue, width: 1.5),
                         ),
-                        // Hata durumunda çerçeve rengi
                         errorBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
                           borderSide: BorderSide(
@@ -137,10 +130,7 @@ class HomeScreen extends StatelessWidget {
                         ),
                       ),
                     ),
-
-                    // Puanlama (Yıldızlar)
-                    const SizedBox(
-                        height: 12), // Mesaj ile yıldız arası biraz daraltıldı
+                    const SizedBox(height: 12),
                     Center(
                         child: Text(
                             selectedRating > 0
@@ -162,7 +152,6 @@ class HomeScreen extends StatelessWidget {
                           onPressed: () {
                             setModalState(() {
                               selectedRating = index + 1;
-                              // Eğer kullanıcı yıldız seçerse, hata mesajını da temizleyelim (çünkü artık gönderebilir)
                               inputErrorText = null;
                             });
                           },
@@ -170,8 +159,6 @@ class HomeScreen extends StatelessWidget {
                       }),
                     ),
                     const SizedBox(height: 24),
-
-                    // Gönder Butonu
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
@@ -186,9 +173,6 @@ class HomeScreen extends StatelessWidget {
                         onPressed: isLoading
                             ? null
                             : () async {
-                                // --- VALİDASYON MANTIĞI ---
-                                // Eğer hem mesaj boşsa HEM DE puan verilmemişse hata ver.
-                                // Yani: Sadece yıldız verirse geçebilir, sadece mesaj yazarsa geçebilir.
                                 if (feedbackController.text.trim().isEmpty &&
                                     selectedRating == 0) {
                                   setModalState(() {
@@ -201,6 +185,10 @@ class HomeScreen extends StatelessWidget {
                                 setModalState(() => isLoading = true);
 
                                 try {
+                                  // Eğer kullanıcı giriş yapmışsa ID'sini de ekleyelim
+                                  final user =
+                                      FirebaseAuth.instance.currentUser;
+
                                   await FirebaseFirestore.instance
                                       .collection('feedbacks')
                                       .add({
@@ -210,6 +198,8 @@ class HomeScreen extends StatelessWidget {
                                     'createdAt': FieldValue.serverTimestamp(),
                                     'platform':
                                         Theme.of(context).platform.toString(),
+                                    'userId': user?.uid, // Opsiyonel
+                                    'userEmail': user?.email, // Opsiyonel
                                   });
 
                                   if (context.mounted) {
@@ -263,7 +253,6 @@ class HomeScreen extends StatelessWidget {
     const Color textColor = Color(0xFF2D3748);
     const Color iconColor = Color(0xFF4A5568);
 
-    // Bilgi Diyaloğu
     void showInfoDialog(BuildContext context) {
       showDialog(
         context: context,
@@ -308,6 +297,48 @@ class HomeScreen extends StatelessWidget {
       );
     }
 
+    // --- LOGOUT FONKSİYONU ---
+    Future<void> _signOut(BuildContext context) async {
+      await FirebaseAuth.instance.signOut();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Çıkış yapıldı")),
+      );
+    }
+
+    // --- GEÇMİŞ KONTROLÜ ---
+    void _handleMyEventsClick(BuildContext context) {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        // Kullanıcı giriş yapmamışsa
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text("Giriş Gerekli"),
+            content: const Text(
+                "Geçmiş etkinliklerinizi görebilmek için giriş yapmalısınız."),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text("İptal"),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  Navigator.push(context,
+                      MaterialPageRoute(builder: (ctx) => const AuthScreen()));
+                },
+                child: const Text("Giriş Yap"),
+              ),
+            ],
+          ),
+        );
+      } else {
+        // Kullanıcı giriş yapmışsa
+        Navigator.push(context,
+            MaterialPageRoute(builder: (context) => const MyEventsScreen()));
+      }
+    }
+
     return Scaffold(
       backgroundColor: backgroundColor,
       body: SafeArea(
@@ -316,7 +347,7 @@ class HomeScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // --- ÜST BAR (Dil, Feedback ve Bilgi) ---
+              // --- ÜST BAR (Dil, Feedback, Info, AUTH) ---
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -356,7 +387,6 @@ class HomeScreen extends StatelessWidget {
                               style: const TextStyle(
                                   fontWeight: FontWeight.w600,
                                   color: textColor)),
-                          const SizedBox(width: 4),
                           const Icon(Icons.keyboard_arrow_down_rounded,
                               color: iconColor, size: 18),
                         ],
@@ -364,10 +394,10 @@ class HomeScreen extends StatelessWidget {
                     ),
                   ),
 
-                  // Sağ Taraf: İkonlar Grubu (Feedback + Info)
+                  // Sağ Taraf: İkonlar Grubu
                   Row(
                     children: [
-                      // --- 2. YENİ EKLENEN FEEDBACK BUTONU ---
+                      // Feedback
                       GestureDetector(
                         onTap: () => _showFeedbackModal(context),
                         child: Container(
@@ -381,10 +411,9 @@ class HomeScreen extends StatelessWidget {
                               color: iconColor, size: 24),
                         ),
                       ),
+                      const SizedBox(width: 12),
 
-                      const SizedBox(width: 12), // İki buton arası boşluk
-
-                      // Mevcut Bilgi Butonu
+                      // Info
                       GestureDetector(
                         onTap: () => showInfoDialog(context),
                         child: Container(
@@ -397,6 +426,50 @@ class HomeScreen extends StatelessWidget {
                           child: const Icon(Icons.info_outline_rounded,
                               color: iconColor, size: 24),
                         ),
+                      ),
+                      const SizedBox(width: 12),
+
+                      // --- AUTH DURUMUNA GÖRE İKON ---
+                      StreamBuilder<User?>(
+                        stream: FirebaseAuth.instance.authStateChanges(),
+                        builder: (context, snapshot) {
+                          if (snapshot.hasData) {
+                            // Giriş yapılmış: Çıkış butonu (veya profil)
+                            return GestureDetector(
+                              onTap: () => _signOut(context),
+                              child: Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: Colors.red.shade50,
+                                  shape: BoxShape.circle,
+                                  border:
+                                      Border.all(color: Colors.red.shade100),
+                                ),
+                                child: Icon(Icons.logout_rounded,
+                                    color: Colors.red.shade400, size: 24),
+                              ),
+                            );
+                          } else {
+                            // Giriş yapılmamış: Giriş butonu
+                            return GestureDetector(
+                              onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (context) =>
+                                          const AuthScreen())),
+                              child: Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: primaryColor, // Koyu renk
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: primaryColor),
+                                ),
+                                child: const Icon(Icons.person_rounded,
+                                    color: Colors.white, size: 24),
+                              ),
+                            );
+                          }
+                        },
                       ),
                     ],
                   ),
@@ -518,11 +591,10 @@ class HomeScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 12),
+
+                  // --- HISTORY BUTONU GÜNCELLENDİ ---
                   GestureDetector(
-                    onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => const MyEventsScreen())),
+                    onTap: () => _handleMyEventsClick(context),
                     child: Container(
                       width: 64,
                       height: 64,

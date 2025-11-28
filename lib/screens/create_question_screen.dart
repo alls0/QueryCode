@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // Artık gerek yok
+// SharedPreferences'ı kaldırdık
 import 'qr_result_screen.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:image_picker/image_picker.dart';
@@ -17,13 +17,13 @@ class QuestionModel {
   TextEditingController textController;
   List<TextEditingController> optionControllers;
   List<Map<String, String>> attachments;
-  bool allowOpenEnded; // YENİ: Açık uçlu cevap izni
+  bool allowOpenEnded;
 
   QuestionModel({
     this.questionText = '',
     required this.options,
     List<Map<String, String>>? attachments,
-    this.allowOpenEnded = false, // Varsayılan kapalı
+    this.allowOpenEnded = false,
   })  : textController = TextEditingController(text: questionText),
         optionControllers =
             options.map((e) => TextEditingController(text: e)).toList(),
@@ -88,7 +88,6 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
       _showWarning("Maksimum $_maxAttachments görsel ekleyebilirsiniz.");
       return;
     }
-
     try {
       final XFile? image = await _picker.pickImage(source: source);
       if (image != null) {
@@ -108,7 +107,6 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
       _showWarning("Maksimum $_maxAttachments dosya ekleyebilirsiniz.");
       return;
     }
-
     try {
       FilePickerResult? result = await FilePicker.platform.pickFiles();
       if (result != null && result.files.single.path != null) {
@@ -183,7 +181,6 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
       _showWarning("En fazla $_maxQuestions soru oluşturabilirsiniz.");
       return;
     }
-
     _syncData();
     setState(() => _questions.add(QuestionModel(options: ['', ''])));
     Future.delayed(const Duration(milliseconds: 100), () {
@@ -208,13 +205,10 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
     File file = File(localPath);
     String fileName =
         "${DateTime.now().millisecondsSinceEpoch}_${path_utils.basename(localPath)}";
-
     Reference storageRef =
         FirebaseStorage.instance.ref().child('uploads/$fileName');
-
     UploadTask uploadTask = storageRef.putFile(file);
     TaskSnapshot snapshot = await uploadTask;
-
     return await snapshot.ref.getDownloadURL();
   }
 
@@ -257,12 +251,13 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
           'questionText': q.questionText,
           'options': q.options,
           'attachments': uploadedAttachments,
-          'allowOpenEnded': q.allowOpenEnded, // YENİ: Veritabanına kaydet
+          'allowOpenEnded': q.allowOpenEnded,
         });
       }
 
       final eventData = {
         'createdAt': Timestamp.now(),
+        // Eğer kullanıcı giriş yapmışsa ID'sini kaydet, yoksa null
         'creatorId': user?.uid,
         'eventTitle': _eventTitleController.text.trim().isNotEmpty
             ? _eventTitleController.text.trim()
@@ -276,15 +271,10 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
       final docRef =
           await FirebaseFirestore.instance.collection('events').add(eventData);
       final eventId = docRef.id;
-      try {
-        final prefs = await SharedPreferences.getInstance();
-        final List<String> savedEvents =
-            prefs.getStringList('saved_events') ?? [];
-        savedEvents.add(eventId);
-        await prefs.setStringList('saved_events', savedEvents);
-      } catch (e) {
-        debugPrint("Geçmişe kaydetme hatası: $e");
-      }
+
+      // NOT: Burada SharedPreferences kodunu SİLDİM.
+      // Misafirler için kaydetmiyoruz (istemiyorsun).
+      // Üyeler için Firebase'den çekeceğiz.
 
       if (mounted) {
         Navigator.pushReplacement(
@@ -313,8 +303,7 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))));
   }
 
-  // --- UI PARÇALARI ---
-
+  // --- UI PARÇALARI (Aynı kaldı) ---
   Widget _buildQuestionCard(int index) {
     final question = _questions[index];
     return Container(
@@ -381,7 +370,7 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
                                 color: _primaryDark.withOpacity(0.9))))),
                 const SizedBox(height: 16),
 
-                // --- MEDYA LİSTESİ ---
+                // MEDYA LİSTESİ
                 if (question.attachments.isNotEmpty)
                   SizedBox(
                     height: 100,
@@ -468,10 +457,9 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
                         ]),
                   ),
                 ),
-
                 const SizedBox(height: 24),
 
-                // SEÇENEKLER BAŞLIĞI
+                // SEÇENEKLER
                 Text("create_options_title".tr(),
                     style: TextStyle(
                         color: _softGrey,
@@ -479,8 +467,6 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
                         fontSize: 12,
                         letterSpacing: 1)),
                 const SizedBox(height: 12),
-
-                // SEÇENEK LİSTESİ
                 ...List.generate(question.optionControllers.length, (optIndex) {
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 12),
@@ -515,10 +501,9 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
                     ),
                   );
                 }),
-
                 const SizedBox(height: 8),
 
-                // SEÇENEK EKLE BUTONU
+                // Seçenek Ekle
                 Align(
                     alignment: Alignment.centerLeft,
                     child: TextButton.icon(
@@ -544,7 +529,7 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 16, vertical: 12)))),
 
-                // --- YENİ BÖLÜM: AÇIK UÇLU SEÇENEK ---
+                // Açık Uçlu Seçenek
                 const SizedBox(height: 16),
                 Divider(color: Colors.grey.shade100, height: 24),
                 SwitchListTile(
@@ -565,8 +550,6 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
                     });
                   },
                 ),
-
-                // Önizleme (Aktifse görünür)
                 if (question.allowOpenEnded)
                   Padding(
                     padding: const EdgeInsets.only(top: 8, bottom: 20),
@@ -756,51 +739,55 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
         backgroundColor: _surfaceWhite,
         shape: const RoundedRectangleBorder(
             borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-        builder: (context) {
-          return StatefulBuilder(builder: (context, setSheetState) {
-            return Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text("Ayarlar",
-                          style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: _primaryDark)),
-                      const SizedBox(height: 20),
-                      SwitchListTile(
-                          contentPadding: EdgeInsets.zero,
-                          title: Text("create_nickname_required".tr(),
-                              style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  color: _primaryDark)),
-                          value: _isNicknameRequired,
-                          activeColor: _primaryBlue,
-                          onChanged: (val) {
-                            setSheetState(() => _isNicknameRequired = val);
-                            this.setState(() => _isNicknameRequired = val);
-                          }),
-                      Divider(color: _bgLight, thickness: 2),
-                      const SizedBox(height: 10),
-                      Text("create_timer_title".tr(),
-                          style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: _primaryDark)),
-                      const SizedBox(height: 12),
-                      Wrap(spacing: 10, children: [
-                        _buildDurationChip(
-                            "30s", const Duration(seconds: 30), setSheetState),
-                        _buildDurationChip(
-                            "1m", const Duration(minutes: 1), setSheetState),
-                        _buildDurationChip(
-                            "2m", const Duration(minutes: 2), setSheetState),
-                        _buildDurationChip("∞", Duration.zero, setSheetState)
-                      ]),
-                      const SizedBox(height: 20),
-                    ]));
-          });
+        builder: (BuildContext context) {
+          // HATA DÜZELTİLDİ: StatefulBuilder eklendi
+          return StatefulBuilder(
+            builder: (BuildContext context, StateSetter setSheetState) {
+              return Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text("Ayarlar",
+                            style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: _primaryDark)),
+                        const SizedBox(height: 20),
+                        SwitchListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: Text("create_nickname_required".tr(),
+                                style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    color: _primaryDark)),
+                            value: _isNicknameRequired,
+                            activeColor: _primaryBlue,
+                            onChanged: (val) {
+                              // Hem modal'ın hem sayfanın durumunu güncelle
+                              setSheetState(() => _isNicknameRequired = val);
+                              this.setState(() => _isNicknameRequired = val);
+                            }),
+                        Divider(color: _bgLight, thickness: 2),
+                        const SizedBox(height: 10),
+                        Text("create_timer_title".tr(),
+                            style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: _primaryDark)),
+                        const SizedBox(height: 12),
+                        Wrap(spacing: 10, children: [
+                          _buildDurationChip("30s", const Duration(seconds: 30),
+                              setSheetState),
+                          _buildDurationChip(
+                              "1m", const Duration(minutes: 1), setSheetState),
+                          _buildDurationChip(
+                              "2m", const Duration(minutes: 2), setSheetState),
+                          _buildDurationChip("∞", Duration.zero, setSheetState)
+                        ]),
+                        const SizedBox(height: 20),
+                      ]));
+            },
+          );
         });
   }
 
