@@ -658,7 +658,7 @@ class _QRResultScreenState extends State<QRResultScreen> {
     final eventRef =
         FirebaseFirestore.instance.collection('events').doc(widget.eventId);
     // URL'yi kendi web linkinize göre düzenleyin
-    final qrData = 'https://querycode.web.app/event/${widget.eventId}';
+    final qrData = 'https://querycode-app.web.app/event/${widget.eventId}';
 
     return WillPopScope(
       onWillPop: _onWillPop,
