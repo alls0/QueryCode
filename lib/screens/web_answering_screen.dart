@@ -214,8 +214,6 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
   }
 
   Widget _buildNicknameStep() {
-    // ... Bu kısım (Nickname formu) önceki kodunuzdaki gibi kalabilir ...
-    // Hızlı olması için burayı kısaltıyorum, önceki koddaki _buildNicknameStep aynı şekilde kullanılabilir.
     return Container(
       width: 450,
       padding: const EdgeInsets.all(32),
@@ -393,6 +391,7 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
                   TextField(
                     controller: _otherAnswerController,
                     autofocus: true,
+                    maxLength: 20, // YENİ: Karakter sınırı eklendi
                     decoration: InputDecoration(
                       hintText: "Type your answer here...",
                       border: OutlineInputBorder(

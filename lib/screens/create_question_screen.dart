@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-// import 'package:shared_preferences/shared_preferences.dart'; // Artık gerek yok
+import 'package:shared_preferences/shared_preferences.dart'; // Artık gerek yok
 import 'qr_result_screen.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:image_picker/image_picker.dart';
@@ -276,6 +276,15 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
       final docRef =
           await FirebaseFirestore.instance.collection('events').add(eventData);
       final eventId = docRef.id;
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final List<String> savedEvents =
+            prefs.getStringList('saved_events') ?? [];
+        savedEvents.add(eventId);
+        await prefs.setStringList('saved_events', savedEvents);
+      } catch (e) {
+        debugPrint("Geçmişe kaydetme hatası: $e");
+      }
 
       if (mounted) {
         Navigator.pushReplacement(
@@ -568,7 +577,7 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
                             height: 8,
                             decoration: BoxDecoration(
                                 border: Border.all(
-                                    color: _primaryDark.withOpacity(0.3),
+                                    color: _primaryDark.withOpacity(0.6),
                                     width: 1.5),
                                 shape: BoxShape.circle)),
                         const SizedBox(width: 12),

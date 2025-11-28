@@ -394,6 +394,7 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
                                           child: TextField(
                                             controller: _otherAnswerController,
                                             autofocus: true,
+                                            maxLength: 20,
                                             decoration: InputDecoration(
                                               hintText:
                                                   "Cevabınızı buraya yazın...",

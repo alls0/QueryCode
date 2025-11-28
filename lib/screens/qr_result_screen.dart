@@ -33,8 +33,6 @@ class _QRResultScreenState extends State<QRResultScreen> {
   final Color _secondaryColor = const Color(0xFF718096);
   final Color _borderColor = const Color(0xFFE2E8F0);
 
-  // (Not: PageController ve Index değişkenleri kaldırıldı çünkü dikey listede gerekmiyor)
-
   @override
   void initState() {
     super.initState();
@@ -45,7 +43,7 @@ class _QRResultScreenState extends State<QRResultScreen> {
     super.dispose();
   }
 
-  // --- İSTATİSTİK HESAPLAMA ---
+  // --- İSTATİSTİK HESAPLAMA (BURASI "DİĞER" OLARAK GRUPLAR) ---
   Map<String, dynamic> _calculateStatsLogic(
       Map<String, dynamic> results, List<dynamic> questions) {
     if (results.isEmpty) {
@@ -57,6 +55,8 @@ class _QRResultScreenState extends State<QRResultScreen> {
 
     for (var question in questions) {
       final questionText = question['questionText'] as String? ?? "Unknown";
+      final allowOpenEnded = question['allowOpenEnded'] as bool? ?? false;
+
       Map<String, int> optionCounts = {};
 
       final optionsList = (question['options'] as List<dynamic>? ?? []);
@@ -64,15 +64,24 @@ class _QRResultScreenState extends State<QRResultScreen> {
         optionCounts[option.toString()] = 0;
       }
 
+      // Eğer açık uçlu varsa istatistik için 'Diğer' sayacı aç
+      if (allowOpenEnded) {
+        optionCounts["Diğer"] = 0;
+      }
+
       for (var respondentAnswers in results.values) {
         if (respondentAnswers is List) {
           for (var answer in respondentAnswers) {
             if (answer is Map && answer['question'] == questionText) {
               final selectedOption = answer['answer'];
-              if (selectedOption != null &&
-                  optionCounts.containsKey(selectedOption)) {
-                optionCounts[selectedOption] =
-                    optionCounts[selectedOption]! + 1;
+              if (selectedOption != null) {
+                // Seçeneklerde varsa onu artır, yoksa 'Diğer'i artır
+                if (optionCounts.containsKey(selectedOption)) {
+                  optionCounts[selectedOption] =
+                      optionCounts[selectedOption]! + 1;
+                } else if (allowOpenEnded) {
+                  optionCounts["Diğer"] = (optionCounts["Diğer"] ?? 0) + 1;
+                }
               }
               break;
             }
@@ -253,7 +262,7 @@ class _QRResultScreenState extends State<QRResultScreen> {
     );
   }
 
-  // --- LİSTE GÖRÜNÜMÜ ---
+  // --- LİSTE GÖRÜNÜMÜ (BURASI ORİJİNAL CEVABI GÖSTERİR) ---
   Widget _buildListView(Map<String, dynamic> results) {
     if (results.isEmpty) return _buildEmptyState();
 
@@ -295,6 +304,7 @@ class _QRResultScreenState extends State<QRResultScreen> {
                     fontWeight: FontWeight.w700, color: _primaryColor)),
             children: answers.map((a) {
               if (a is Map) {
+                // BURADA DEĞİŞİKLİK YAPILMADI: Kullanıcı ne yazdıysa o görünür.
                 return ListTile(
                   title: Text(a['question']?.toString() ?? '',
                       style: TextStyle(fontSize: 13, color: _secondaryColor)),
@@ -408,13 +418,12 @@ class _QRResultScreenState extends State<QRResultScreen> {
     );
   }
 
-  // --- GRAFİK GÖRÜNÜMÜ (DİKEY LİSTE MODU) ---
+  // --- GRAFİK GÖRÜNÜMÜ ---
   Widget _buildChartView(Map<String, dynamic> stats) {
     if (stats.isEmpty) return _buildEmptyState();
 
     final keys = stats.keys.toList();
 
-    // PageView yerine ListView kullanıyoruz (Alt alta sıralı)
     return ListView.separated(
       physics: const NeverScrollableScrollPhysics(),
       shrinkWrap: true,
@@ -459,9 +468,8 @@ class _QRResultScreenState extends State<QRResultScreen> {
           );
         }).toList();
 
-        // Her bir grafik için Container
         return Container(
-          height: 350, // Sabit yükseklik
+          height: 350,
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
             color: Colors.white,
