@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import 'thank_you_screen.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart'; // <-- EKLENDİ
 
 class AnsweringScreen extends StatefulWidget {
   final String eventId;
@@ -136,7 +137,8 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
     if (finalAnswer.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("answer_enter_answer".tr()),
+          content: Text("answer_enter_answer".tr(),
+              style: TextStyle(fontSize: 14.sp)), // .sp EKLENDİ
           backgroundColor: Colors.redAccent,
           behavior: SnackBarBehavior.floating,
         ),
@@ -190,8 +192,9 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
             errorMsg = "answer_already_voted".tr();
           }
 
-          ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(errorMsg), backgroundColor: Colors.red));
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(errorMsg, style: TextStyle(fontSize: 14.sp)),
+              backgroundColor: Colors.red));
 
           if (e.toString().contains("Already voted")) {
             setState(() {
@@ -233,22 +236,22 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
           tag: 'app_logo',
           child: Image.asset(
             'assets/images/logo4.png',
-            height: 40, // Logo boyutu
-            errorBuilder: (c, o, s) =>
-                Icon(Icons.qr_code_2, color: _primaryColor),
+            height: 40.h, // .h EKLENDİ (Logo boyutu)
+            errorBuilder: (c, o, s) => Icon(Icons.qr_code_2,
+                color: _primaryColor, size: 30.sp), // .sp EKLENDİ
           ),
         ),
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(6.0),
+          preferredSize: Size.fromHeight(6.0.h), // .h EKLENDİ
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            padding: EdgeInsets.symmetric(horizontal: 24.0.w), // .w EKLENDİ
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(10.r), // .r EKLENDİ
               child: LinearProgressIndicator(
                 value: progress,
                 backgroundColor: Colors.grey.shade200,
                 color: _primaryColor, // Uygulamanın ana rengi
-                minHeight: 6,
+                minHeight: 6.h, // .h EKLENDİ
               ),
             ),
           ),
@@ -266,24 +269,24 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
   Widget _buildErrorView() {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32.0),
+        padding: EdgeInsets.all(32.0.r), // .r EKLENDİ
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(20),
+              padding: EdgeInsets.all(20.r), // .r EKLENDİ
               decoration: BoxDecoration(
                   color: Colors.orange.shade50, shape: BoxShape.circle),
               child: Icon(Icons.info_outline_rounded,
-                  size: 48, color: Colors.orange.shade700),
+                  size: 48.sp, color: Colors.orange.shade700), // .sp EKLENDİ
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: 24.h), // .h EKLENDİ
             Text(
               _errorMessage,
               textAlign: TextAlign.center,
               style: TextStyle(
                   color: _primaryColor,
-                  fontSize: 16,
+                  fontSize: 16.sp, // .sp EKLENDİ
                   fontWeight: FontWeight.w600,
                   height: 1.5),
             ),
@@ -313,7 +316,7 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
       child: SingleChildScrollView(
         // Key kullanarak AnimatedSwitcher'ın değişimi algılamasını sağlıyoruz
         key: ValueKey<int>(_currentQuestionIndex),
-        padding: const EdgeInsets.fromLTRB(24, 20, 24, 40),
+        padding: EdgeInsets.fromLTRB(24.w, 20.h, 24.w, 40.h), // .w .h EKLENDİ
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -324,35 +327,35 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
               style: TextStyle(
                   color: _secondaryColor,
                   fontWeight: FontWeight.bold,
-                  fontSize: 12,
+                  fontSize: 12.sp, // .sp EKLENDİ
                   letterSpacing: 1.0),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12.h), // .h EKLENDİ
 
             // Soru Metni Kartı
             Container(
-              padding: const EdgeInsets.all(24),
+              padding: EdgeInsets.all(24.r), // .r EKLENDİ
               decoration: BoxDecoration(
                 color: _surfaceColor,
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(24.r), // .r EKLENDİ
                 boxShadow: [
                   BoxShadow(
                       color: Colors.black.withOpacity(0.04),
-                      blurRadius: 16,
-                      offset: const Offset(0, 4))
+                      blurRadius: 16.r, // .r EKLENDİ
+                      offset: Offset(0, 4.h)) // .h EKLENDİ
                 ],
               ),
               child: Text(
                 currentQuestion['questionText'] ?? "",
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                    fontSize: 20,
+                    fontSize: 20.sp, // .sp EKLENDİ
                     fontWeight: FontWeight.w800,
                     color: _primaryColor,
                     height: 1.3),
               ),
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: 24.h), // .h EKLENDİ
 
             // Medya Alanı (Varsa)
             if (rawAttachments.isNotEmpty) _buildMediaCarousel(rawAttachments),
@@ -362,7 +365,7 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: options.length,
-              separatorBuilder: (c, i) => const SizedBox(height: 12),
+              separatorBuilder: (c, i) => SizedBox(height: 12.h), // .h EKLENDİ
               itemBuilder: (context, index) {
                 final option = options[index];
                 return _buildOptionCard(option);
@@ -371,22 +374,22 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
 
             // Diğer (Open Ended) Seçeneği
             if (allowOpenEnded) ...[
-              const SizedBox(height: 12),
+              SizedBox(height: 12.h), // .h EKLENDİ
               _buildOtherOption(),
             ],
 
-            const SizedBox(height: 32),
+            SizedBox(height: 32.h), // .h EKLENDİ
 
             // İleri / Bitir Butonu
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: _primaryColor,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 20),
+                padding: EdgeInsets.symmetric(vertical: 20.h), // .h EKLENDİ
                 elevation: 4,
                 shadowColor: _primaryColor.withOpacity(0.3),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16)),
+                    borderRadius: BorderRadius.circular(16.r)), // .r EKLENDİ
               ),
               onPressed: _selectedAnswer == null ? null : _submitAndGoToNext,
               child: Row(
@@ -396,15 +399,16 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
                     _currentQuestionIndex < _questions.length - 1
                         ? "answer_next_button".tr()
                         : "answer_finish_button".tr(),
-                    style: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.bold), // .sp EKLENDİ
                   ),
-                  const SizedBox(width: 8),
+                  SizedBox(width: 8.w), // .w EKLENDİ
                   Icon(
                     _currentQuestionIndex < _questions.length - 1
                         ? Icons.arrow_forward_rounded
                         : Icons.check_circle_rounded,
-                    size: 20,
+                    size: 20.sp, // .sp EKLENDİ
                   )
                 ],
               ),
@@ -423,7 +427,7 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
     return Column(
       children: [
         SizedBox(
-          height: 220,
+          height: 220.h, // .h EKLENDİ
           child: Stack(
             children: [
               // 1. Resim Kaydırıcı
@@ -436,9 +440,9 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
                   final attachment = attachments[idx];
                   final path = attachment['path']?.toString() ?? '';
                   return Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    margin: EdgeInsets.symmetric(horizontal: 4.w), // .w EKLENDİ
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(20.r), // .r EKLENDİ
                       color: Colors.black12,
                       image: attachment['type'] == 'image'
                           ? DecorationImage(
@@ -446,9 +450,10 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
                           : null,
                     ),
                     child: attachment['type'] != 'image'
-                        ? const Center(
+                        ? Center(
                             child: Icon(Icons.insert_drive_file,
-                                size: 40, color: Colors.white))
+                                size: 40.sp,
+                                color: Colors.white)) // .sp EKLENDİ
                         : null,
                   );
                 },
@@ -457,20 +462,20 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
               // 2. Resim Sayacı (Sağ Üst Köşe - Örn: 1/3)
               if (attachments.length > 1)
                 Positioned(
-                  top: 10,
-                  right: 14,
+                  top: 10.h, // .h EKLENDİ
+                  right: 14.w, // .w EKLENDİ
                   child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: EdgeInsets.symmetric(
+                        horizontal: 10.w, vertical: 4.h), // .w .h EKLENDİ
                     decoration: BoxDecoration(
                       color: Colors.black.withOpacity(0.6),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(12.r), // .r EKLENDİ
                     ),
                     child: Text(
                       "${_currentMediaIndex + 1}/${attachments.length}",
-                      style: const TextStyle(
+                      style: TextStyle(
                           color: Colors.white,
-                          fontSize: 12,
+                          fontSize: 12.sp, // .sp EKLENDİ
                           fontWeight: FontWeight.bold),
                     ),
                   ),
@@ -479,7 +484,7 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
               // 3. Sol Ok (Geri)
               if (_currentMediaIndex > 0)
                 Positioned(
-                  left: 8,
+                  left: 8.w, // .w EKLENDİ
                   top: 0,
                   bottom: 0,
                   child: Center(
@@ -490,15 +495,15 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
                             curve: Curves.easeInOut);
                       },
                       child: Container(
-                        padding: const EdgeInsets.all(6),
+                        padding: EdgeInsets.all(6.r), // .r EKLENDİ
                         decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.8),
                             shape: BoxShape.circle,
-                            boxShadow: [
+                            boxShadow: const [
                               BoxShadow(color: Colors.black12, blurRadius: 4)
                             ]),
                         child: Icon(Icons.arrow_back_ios_new_rounded,
-                            size: 18, color: _primaryColor),
+                            size: 18.sp, color: _primaryColor), // .sp EKLENDİ
                       ),
                     ),
                   ),
@@ -507,7 +512,7 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
               // 4. Sağ Ok (İleri)
               if (_currentMediaIndex < attachments.length - 1)
                 Positioned(
-                  right: 8,
+                  right: 8.w, // .w EKLENDİ
                   top: 0,
                   bottom: 0,
                   child: Center(
@@ -518,15 +523,15 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
                             curve: Curves.easeInOut);
                       },
                       child: Container(
-                        padding: const EdgeInsets.all(6),
+                        padding: EdgeInsets.all(6.r), // .r EKLENDİ
                         decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.8),
                             shape: BoxShape.circle,
-                            boxShadow: [
+                            boxShadow: const [
                               BoxShadow(color: Colors.black12, blurRadius: 4)
                             ]),
                         child: Icon(Icons.arrow_forward_ios_rounded,
-                            size: 18, color: _primaryColor),
+                            size: 18.sp, color: _primaryColor), // .sp EKLENDİ
                       ),
                     ),
                   ),
@@ -538,27 +543,27 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
         // Alt Noktalar (Dots) - Mevcut haliyle kalabilir
         if (attachments.length > 1)
           Padding(
-            padding: const EdgeInsets.only(top: 12),
+            padding: EdgeInsets.only(top: 12.h), // .h EKLENDİ
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(
                 attachments.length,
                 (index) => AnimatedContainer(
                   duration: const Duration(milliseconds: 300),
-                  margin: const EdgeInsets.symmetric(horizontal: 3),
-                  height: 6,
-                  width: _currentMediaIndex == index ? 20 : 6,
+                  margin: EdgeInsets.symmetric(horizontal: 3.w), // .w EKLENDİ
+                  height: 6.h, // .h EKLENDİ
+                  width: _currentMediaIndex == index ? 20.w : 6.w, // .w EKLENDİ
                   decoration: BoxDecoration(
                     color: _currentMediaIndex == index
                         ? _primaryColor
                         : Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(3),
+                    borderRadius: BorderRadius.circular(3.r), // .r EKLENDİ
                   ),
                 ),
               ),
             ),
           ),
-        const SizedBox(height: 24),
+        SizedBox(height: 24.h), // .h EKLENDİ
       ],
     );
   }
@@ -570,18 +575,20 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
       onTap: () => setState(() => _selectedAnswer = option),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
+        padding: EdgeInsets.symmetric(
+            vertical: 18.h, horizontal: 20.w), // .h .w EKLENDİ
         decoration: BoxDecoration(
           color: isSelected ? _primaryColor : _surfaceColor,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(16.r), // .r EKLENDİ
           border: Border.all(
-              color: isSelected ? _primaryColor : Colors.transparent, width: 2),
+              color: isSelected ? _primaryColor : Colors.transparent,
+              width: 2.w), // .w EKLENDİ
           boxShadow: [
             if (!isSelected)
               BoxShadow(
                   color: Colors.black.withOpacity(0.03),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4)),
+                  blurRadius: 10.r, // .r EKLENDİ
+                  offset: Offset(0, 4.h)), // .h EKLENDİ
           ],
         ),
         child: Row(
@@ -592,14 +599,14 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
                   ? Icons.radio_button_checked_rounded
                   : Icons.radio_button_unchecked_rounded,
               color: isSelected ? Colors.white : Colors.grey.shade400,
-              size: 22,
+              size: 22.sp, // .sp EKLENDİ
             ),
-            const SizedBox(width: 16),
+            SizedBox(width: 16.w), // .w EKLENDİ
             Expanded(
               child: Text(
                 option,
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: 16.sp, // .sp EKLENDİ
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                   color: isSelected ? Colors.white : _primaryColor,
                 ),
@@ -620,18 +627,19 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
           onTap: () => setState(() => _selectedAnswer = _otherOptionKey),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
-            padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
+            padding: EdgeInsets.symmetric(
+                vertical: 18.h, horizontal: 20.w), // .h .w EKLENDİ
             decoration: BoxDecoration(
               color: isSelected ? _surfaceColor : _surfaceColor,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(16.r), // .r EKLENDİ
               border: Border.all(
                   color: isSelected ? _primaryColor : Colors.transparent,
-                  width: 2),
+                  width: 2.w), // .w EKLENDİ
               boxShadow: [
                 BoxShadow(
                     color: Colors.black.withOpacity(0.03),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4)),
+                    blurRadius: 10.r, // .r EKLENDİ
+                    offset: Offset(0, 4.h)), // .h EKLENDİ
               ],
             ),
             child: Row(
@@ -639,13 +647,13 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
                 Icon(
                   Icons.edit_note_rounded,
                   color: isSelected ? _primaryColor : Colors.grey.shade400,
-                  size: 24,
+                  size: 24.sp, // .sp EKLENDİ
                 ),
-                const SizedBox(width: 16),
+                SizedBox(width: 16.w), // .w EKLENDİ
                 Text(
                   "answer_other_label".tr(), // "Diğer (Lütfen belirtiniz)"
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: 16.sp, // .sp EKLENDİ
                     fontWeight: FontWeight.w600,
                     color: isSelected ? _primaryColor : _primaryColor,
                   ),
@@ -659,28 +667,30 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
           duration: const Duration(milliseconds: 300),
           child: isSelected
               ? Container(
-                  margin: const EdgeInsets.only(top: 12),
+                  margin: EdgeInsets.only(top: 12.h), // .h EKLENDİ
                   child: TextField(
                     controller: _otherAnswerController,
                     autofocus: true,
                     maxLength: 50,
-                    style: TextStyle(color: _primaryColor),
+                    style: TextStyle(
+                        color: _primaryColor, fontSize: 16.sp), // .sp EKLENDİ
                     decoration: InputDecoration(
                       hintText: "answer_other_hint".tr(),
                       filled: true,
                       fillColor: _surfaceColor,
-                      contentPadding: const EdgeInsets.all(16),
+                      contentPadding: EdgeInsets.all(16.r), // .r EKLENDİ
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(16.r), // .r EKLENDİ
                         borderSide: BorderSide(color: Colors.grey.shade300),
                       ),
                       enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(16.r), // .r EKLENDİ
                         borderSide: BorderSide(color: Colors.grey.shade300),
                       ),
                       focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide(color: _primaryColor, width: 2),
+                        borderRadius: BorderRadius.circular(16.r), // .r EKLENDİ
+                        borderSide: BorderSide(
+                            color: _primaryColor, width: 2.w), // .w EKLENDİ
                       ),
                     ),
                   ),

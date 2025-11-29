@@ -8,6 +8,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:path/path.dart' as path_utils;
+import 'package:flutter_screenutil/flutter_screenutil.dart'; // <-- EKLENDİ
 
 // --- MODEL ---
 class QuestionModel {
@@ -189,33 +190,39 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
     showModalBottomSheet(
       context: context,
       backgroundColor: _surfaceWhite,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: RoundedRectangleBorder(
+          borderRadius:
+              BorderRadius.vertical(top: Radius.circular(20.r))), // .r EKLENDİ
       builder: (context) {
         return SafeArea(
           child: Wrap(
             children: <Widget>[
               ListTile(
-                  leading: Icon(Icons.camera_alt_rounded, color: _primaryDark),
+                  leading: Icon(Icons.camera_alt_rounded,
+                      color: _primaryDark, size: 24.sp), // .sp EKLENDİ
                   title: Text('create_media_take_photo'.tr(),
-                      style: TextStyle(color: _primaryDark)),
+                      style: TextStyle(
+                          color: _primaryDark, fontSize: 16.sp)), // .sp EKLENDİ
                   onTap: () {
                     Navigator.pop(context);
                     _pickImage(index, ImageSource.camera);
                   }),
               ListTile(
-                  leading:
-                      Icon(Icons.photo_library_rounded, color: _primaryDark),
+                  leading: Icon(Icons.photo_library_rounded,
+                      color: _primaryDark, size: 24.sp), // .sp EKLENDİ
                   title: Text('create_media_gallery'.tr(),
-                      style: TextStyle(color: _primaryDark)),
+                      style: TextStyle(
+                          color: _primaryDark, fontSize: 16.sp)), // .sp EKLENDİ
                   onTap: () {
                     Navigator.pop(context);
                     _pickImage(index, ImageSource.gallery);
                   }),
               ListTile(
-                  leading: Icon(Icons.attach_file_rounded, color: _primaryDark),
+                  leading: Icon(Icons.attach_file_rounded,
+                      color: _primaryDark, size: 24.sp), // .sp EKLENDİ
                   title: Text('create_media_file'.tr(),
-                      style: TextStyle(color: _primaryDark)),
+                      style: TextStyle(
+                          color: _primaryDark, fontSize: 16.sp)), // .sp EKLENDİ
                   onTap: () {
                     Navigator.pop(context);
                     _pickFile(index);
@@ -342,85 +349,94 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
 
   void _showWarning(String message) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(message),
+        content:
+            Text(message, style: TextStyle(fontSize: 14.sp)), // .sp EKLENDİ
         backgroundColor: Colors.red,
         behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.all(16),
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))));
+        margin: EdgeInsets.all(16.r), // .r EKLENDİ
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10.r)))); // .r EKLENDİ
   }
 
   // --- UI PARÇALARI ---
   Widget _buildQuestionCard(int index) {
     final question = _questions[index];
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 12),
+      margin: EdgeInsets.symmetric(
+          horizontal: 6.w, vertical: 12.h), // .w .h EKLENDİ
       decoration: BoxDecoration(
           color: _surfaceWhite,
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(24.r), // .r EKLENDİ
           boxShadow: [
             BoxShadow(
                 color: Colors.black.withOpacity(0.06),
-                blurRadius: 20,
-                offset: const Offset(0, 10))
+                blurRadius: 20.r, // .r EKLENDİ
+                offset: Offset(0, 10.h)) // .h EKLENDİ
           ]),
       child: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 20, 20, 0),
+            padding: EdgeInsets.fromLTRB(24.w, 20.h, 20.w, 0), // .w .h EKLENDİ
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: EdgeInsets.symmetric(
+                        horizontal: 12.w, vertical: 6.h), // .w .h EKLENDİ
                     decoration: BoxDecoration(
                         color: _bgLight,
-                        borderRadius: BorderRadius.circular(12)),
+                        borderRadius:
+                            BorderRadius.circular(12.r)), // .r EKLENDİ
                     child: Text("Q${index + 1}",
                         style: TextStyle(
                             fontWeight: FontWeight.w900,
                             color: _primaryDark,
-                            fontSize: 16))),
+                            fontSize: 16.sp))), // .sp EKLENDİ
                 if (_questions.length > 1)
                   IconButton(
                       icon: Icon(Icons.delete_outline_rounded,
-                          color: Colors.red.shade300),
+                          color: Colors.red.shade300,
+                          size: 24.sp), // .sp EKLENDİ
                       onPressed: () => _removeQuestion(index))
               ],
             ),
           ),
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.all(24),
+              padding: EdgeInsets.all(24.r), // .r EKLENDİ
               children: [
                 // SORU METNİ
                 TextField(
                     controller: question.textController,
                     maxLines: 3,
                     style: TextStyle(
-                        fontSize: 18, color: _primaryDark, height: 1.4),
+                        fontSize: 18.sp,
+                        color: _primaryDark,
+                        height: 1.4), // .sp EKLENDİ
                     decoration: InputDecoration(
                         hintText: "create_question_hint".tr(),
                         hintStyle: TextStyle(
-                            color: _softGrey.withOpacity(0.5), fontSize: 18),
+                            color: _softGrey.withOpacity(0.5),
+                            fontSize: 18.sp), // .sp EKLENDİ
                         border: InputBorder.none,
                         filled: true,
                         fillColor: _bgLight,
-                        contentPadding: const EdgeInsets.all(16),
+                        contentPadding: EdgeInsets.all(16.r), // .r EKLENDİ
                         enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius:
+                                BorderRadius.circular(16.r), // .r EKLENDİ
                             borderSide: BorderSide.none),
                         focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius:
+                                BorderRadius.circular(16.r), // .r EKLENDİ
                             borderSide: BorderSide(
                                 color: _primaryDark.withOpacity(0.9))))),
-                const SizedBox(height: 16),
+                SizedBox(height: 16.h), // .h EKLENDİ
 
                 // MEDYA LİSTESİ
                 if (question.attachments.isNotEmpty)
                   SizedBox(
-                    height: 100,
+                    height: 100.h, // .h EKLENDİ
                     child: ListView.builder(
                       scrollDirection: Axis.horizontal,
                       itemCount: question.attachments.length,
@@ -429,11 +445,13 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
                         return Stack(
                           children: [
                             Container(
-                              width: 100,
-                              margin: const EdgeInsets.only(right: 12),
+                              width: 100.w, // .w EKLENDİ
+                              margin:
+                                  EdgeInsets.only(right: 12.w), // .w EKLENDİ
                               decoration: BoxDecoration(
                                 color: _bgLight,
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius:
+                                    BorderRadius.circular(12.r), // .r EKLENDİ
                                 border: Border.all(color: Colors.grey.shade200),
                                 image: attachment['type'] == 'image'
                                     ? DecorationImage(
@@ -445,17 +463,18 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
                               child: attachment['type'] == 'file'
                                   ? Center(
                                       child: Icon(Icons.insert_drive_file,
-                                          color: _primaryDark))
+                                          color: _primaryDark,
+                                          size: 32.sp)) // .sp EKLENDİ
                                   : null,
                             ),
                             Positioned(
-                              top: 4,
-                              right: 16,
+                              top: 4.h, // .h EKLENDİ
+                              right: 16.w, // .w EKLENDİ
                               child: GestureDetector(
                                 onTap: () =>
                                     _removeAttachment(index, attachIndex),
                                 child: Container(
-                                  padding: const EdgeInsets.all(4),
+                                  padding: EdgeInsets.all(4.r), // .r EKLENDİ
                                   decoration: const BoxDecoration(
                                       color: Colors.white,
                                       shape: BoxShape.circle,
@@ -464,8 +483,9 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
                                             blurRadius: 2,
                                             color: Colors.black12)
                                       ]),
-                                  child: const Icon(Icons.delete_outline_rounded,
-                                      size: 20, color: Colors.red),
+                                  child: Icon(Icons.delete_outline_rounded,
+                                      size: 20.sp,
+                                      color: Colors.red), // .sp EKLENDİ
                                 ),
                               ),
                             )
@@ -478,13 +498,13 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
                 // Medya Ekle Butonu
                 InkWell(
                   onTap: () => _showAttachmentOptions(index),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(12.r), // .r EKLENDİ
                   child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        vertical: 12, horizontal: 16),
+                    padding: EdgeInsets.symmetric(
+                        vertical: 12.h, horizontal: 16.w), // .h .w EKLENDİ
                     decoration: BoxDecoration(
                         color: _bgLight,
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(12.r), // .r EKLENDİ
                         border: Border.all(
                             color: _primaryDark.withOpacity(0.2),
                             style: BorderStyle.solid)),
@@ -492,49 +512,53 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(Icons.add_photo_alternate_outlined,
-                              color: _primaryDark, size: 20),
-                          const SizedBox(width: 8),
+                              color: _primaryDark, size: 20.sp), // .sp EKLENDİ
+                          SizedBox(width: 8.w), // .w EKLENDİ
                           Text(
                               question.attachments.length >= _maxAttachments
                                   ? "create_media_limit".tr()
                                   : "create_media_add".tr(),
                               style: TextStyle(
                                   color: _primaryDark,
-                                  fontWeight: FontWeight.w600))
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14.sp)) // .sp EKLENDİ
                         ]),
                   ),
                 ),
-                const SizedBox(height: 24),
+                SizedBox(height: 24.h), // .h EKLENDİ
 
                 // --- SEÇENEKLER ---
                 Text("create_options_title".tr(),
                     style: TextStyle(
                         color: _softGrey,
                         fontWeight: FontWeight.bold,
-                        fontSize: 12,
+                        fontSize: 12.sp, // .sp EKLENDİ
                         letterSpacing: 1)),
-                const SizedBox(height: 12),
+                SizedBox(height: 12.h), // .h EKLENDİ
                 ...List.generate(question.optionControllers.length, (optIndex) {
                   return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
+                    padding: EdgeInsets.only(bottom: 12.h), // .h EKLENDİ
                     child: Row(
                       children: [
                         Container(
-                            width: 8,
-                            height: 8,
+                            width: 8.w, // .w EKLENDİ
+                            height: 8.w, // .w EKLENDİ
                             decoration: BoxDecoration(
                                 color: _primaryDark.withOpacity(0.3),
                                 shape: BoxShape.circle)),
-                        const SizedBox(width: 12),
+                        SizedBox(width: 12.w), // .w EKLENDİ
                         Expanded(
                             child: TextField(
                                 controller:
                                     question.optionControllers[optIndex],
-                                style: TextStyle(color: _primaryDark),
+                                style: TextStyle(
+                                    color: _primaryDark,
+                                    fontSize: 16.sp), // .sp EKLENDİ
                                 decoration: InputDecoration(
                                     hintText: "create_option_hint".tr(),
                                     hintStyle: TextStyle(
-                                        color: _softGrey.withOpacity(0.5)),
+                                        color: _softGrey.withOpacity(0.5),
+                                        fontSize: 16.sp), // .sp EKLENDİ
                                     border: UnderlineInputBorder(
                                         borderSide: BorderSide(
                                             color: Colors.grey.shade200)),
@@ -548,8 +572,9 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
                         // SEÇENEK SİLME BUTONU
                         if (question.optionControllers.length > 2)
                           IconButton(
-                            icon: const Icon(Icons.delete_outline_rounded,
-                                color: Colors.redAccent, size: 22),
+                            icon: Icon(Icons.delete_outline_rounded,
+                                color: Colors.redAccent,
+                                size: 22.sp), // .sp EKLENDİ
                             onPressed: () {
                               setState(() {
                                 question.options.removeAt(optIndex);
@@ -562,7 +587,7 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
                     ),
                   );
                 }),
-                const SizedBox(height: 8),
+                SizedBox(height: 8.h), // .h EKLENDİ
 
                 // --- SEÇENEK EKLE VE SAYAÇ ---
                 Align(
@@ -580,48 +605,57 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
                                 .add(TextEditingController());
                           });
                         },
-                        icon: const Icon(Icons.add_rounded, size: 18),
+                        icon:
+                            Icon(Icons.add_rounded, size: 18.sp), // .sp EKLENDİ
                         label: Text(
                             "${"create_add_option".tr()} (${question.options.length}/$_maxOptions)", // SAYAÇ EKLENDİ
-                            style:
-                                const TextStyle(fontWeight: FontWeight.w600)),
+                            style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14.sp)), // .sp EKLENDİ
                         style: TextButton.styleFrom(
                             foregroundColor: _primaryDark,
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 12)))),
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 16.w,
+                                vertical: 12.h)))), // .w .h EKLENDİ
 
                 // Açık Uçlu Seçenek
-                const SizedBox(height: 16),
-                Divider(color: Colors.grey.shade100, height: 24),
+                SizedBox(height: 16.h), // .h EKLENDİ
+                Divider(
+                    color: Colors.grey.shade100, height: 24.h), // .h EKLENDİ
                 // ...
-SwitchListTile(
-  contentPadding: EdgeInsets.zero,
-  
-  // --- AKTİF (AÇIK) RENKLER ---
-  activeColor: _primaryDark, // Top rengi (Koyu Lacivert)
-  activeTrackColor: _primaryDark.withOpacity(0.3), // Arkadaki iz (Soluk Lacivert)
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
 
-  // --- PASİF (KAPALI) RENKLER ---
-  inactiveThumbColor: _softGrey, // Top rengi (Sizin tanımladığınız gri)
-  inactiveTrackColor: Colors.grey.shade200, // Arkadaki iz (Çok açık gri)
-  
-  // İsteğe bağlı: Kenar çizgisini kaldırmak daha "flat" bir görüntü verir
-  trackOutlineColor: MaterialStateProperty.all(Colors.transparent),
+                  // --- AKTİF (AÇIK) RENKLER ---
+                  activeColor: _primaryDark, // Top rengi (Koyu Lacivert)
+                  activeTrackColor: _primaryDark
+                      .withOpacity(0.3), // Arkadaki iz (Soluk Lacivert)
 
-  title: Text("create_other_option".tr(),
-      style: TextStyle(
-          color: _primaryDark,
-          fontWeight: FontWeight.w600,
-          fontSize: 14)),
-  subtitle: Text("create_other_desc".tr(),
-      style: TextStyle(color: _softGrey, fontSize: 12)),
-  value: question.allowOpenEnded,
-  onChanged: (val) {
-    setState(() {
-      question.allowOpenEnded = val;
-    });
-  },
-),
+                  // --- PASİF (KAPALI) RENKLER ---
+                  inactiveThumbColor:
+                      _softGrey, // Top rengi (Sizin tanımladığınız gri)
+                  inactiveTrackColor:
+                      Colors.grey.shade200, // Arkadaki iz (Çok açık gri)
+
+                  // İsteğe bağlı: Kenar çizgisini kaldırmak daha "flat" bir görüntü verir
+                  trackOutlineColor:
+                      MaterialStateProperty.all(Colors.transparent),
+
+                  title: Text("create_other_option".tr(),
+                      style: TextStyle(
+                          color: _primaryDark,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14.sp)), // .sp EKLENDİ
+                  subtitle: Text("create_other_desc".tr(),
+                      style: TextStyle(
+                          color: _softGrey, fontSize: 12.sp)), // .sp EKLENDİ
+                  value: question.allowOpenEnded,
+                  onChanged: (val) {
+                    setState(() {
+                      question.allowOpenEnded = val;
+                    });
+                  },
+                ),
               ],
             ),
           ),
@@ -632,42 +666,46 @@ SwitchListTile(
 
   Widget _buildHeader() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+      padding: EdgeInsets.fromLTRB(20.w, 20.h, 20.w, 10.h), // .w .h EKLENDİ
       child: Row(
         children: [
           GestureDetector(
               onTap: () => Navigator.pop(context),
               child: Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: EdgeInsets.all(10.r), // .r EKLENDİ
                   decoration: BoxDecoration(
                       color: _surfaceWhite,
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
                             color: Colors.black.withOpacity(0.05),
-                            blurRadius: 10)
+                            blurRadius: 10.r) // .r EKLENDİ
                       ]),
                   child: Icon(Icons.close_rounded,
-                      color: _primaryDark, size: 20))),
-          const SizedBox(width: 16),
+                      color: _primaryDark, size: 20.sp))), // .sp EKLENDİ
+          SizedBox(width: 16.w), // .w EKLENDİ
           Expanded(
               child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  padding: EdgeInsets.symmetric(
+                      horizontal: 16.w, vertical: 4.h), // .w .h EKLENDİ
                   decoration: BoxDecoration(
                       color: _surfaceWhite,
-                      borderRadius: BorderRadius.circular(30),
+                      borderRadius: BorderRadius.circular(30.r), // .r EKLENDİ
                       border: Border.all(color: Colors.grey.shade200)),
                   child: TextField(
                       controller: _eventTitleController,
                       style: TextStyle(
-                          fontWeight: FontWeight.bold, color: _primaryDark),
+                          fontWeight: FontWeight.bold,
+                          color: _primaryDark,
+                          fontSize: 16.sp), // .sp EKLENDİ
                       decoration: InputDecoration(
                           hintText: "event_name_hint".tr(),
                           border: InputBorder.none,
                           icon: Icon(Icons.edit_rounded,
-                              size: 16, color: _softGrey),
-                          hintStyle: TextStyle(color: _softGrey))))),
+                              size: 16.sp, color: _softGrey), // .sp EKLENDİ
+                          hintStyle: TextStyle(
+                              color: _softGrey,
+                              fontSize: 16.sp))))), // .sp EKLENDİ
         ],
       ),
     );
@@ -675,7 +713,7 @@ SwitchListTile(
 
   Widget _buildBottomBar() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+      padding: EdgeInsets.fromLTRB(24.w, 16.h, 24.w, 32.h), // .w .h EKLENDİ
       decoration: BoxDecoration(
           color: _surfaceWhite,
           border: Border(top: BorderSide(color: Colors.grey.shade100))),
@@ -683,84 +721,89 @@ SwitchListTile(
         children: [
           InkWell(
               onTap: _showSettingsSheet,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(12.r), // .r EKLENDİ
               child: Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: EdgeInsets.all(12.r), // .r EKLENDİ
                   decoration: BoxDecoration(
                       color: _bgLight,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(12.r), // .r EKLENDİ
                       border: Border.all(
                           color: _isNicknameRequired
                               ? _primaryDark
                               : Colors.transparent,
-                          width: 2)),
-                  child: Icon(Icons.tune_rounded, color: _primaryDark))),
+                          width: 2.w)), // .w EKLENDİ
+                  child: Icon(Icons.tune_rounded,
+                      color: _primaryDark, size: 24.sp))), // .sp EKLENDİ
           const Spacer(),
           Material(
               color: Colors.transparent,
               child: InkWell(
                   onTap: _addNewQuestion,
-                  borderRadius: BorderRadius.circular(50),
+                  borderRadius: BorderRadius.circular(50.r), // .r EKLENDİ
                   child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 12),
+                      padding: EdgeInsets.symmetric(
+                          horizontal: 20.w, vertical: 12.h), // .w .h EKLENDİ
                       decoration: BoxDecoration(
                           color: _bgLight,
-                          borderRadius: BorderRadius.circular(30)),
+                          borderRadius:
+                              BorderRadius.circular(30.r)), // .r EKLENDİ
                       child: Row(children: [
-                        Icon(Icons.add_rounded, color: _primaryDark, size: 20),
-                        const SizedBox(width: 8),
+                        Icon(Icons.add_rounded,
+                            color: _primaryDark, size: 20.sp), // .sp EKLENDİ
+                        SizedBox(width: 8.w), // .w EKLENDİ
                         Text(
                             "${'create_question_tab_prefix'.tr()}${_questions.length}/$_maxQuestions",
                             style: TextStyle(
                                 fontWeight: FontWeight.bold,
-                                color: _primaryDark))
+                                color: _primaryDark,
+                                fontSize: 14.sp)) // .sp EKLENDİ
                       ])))),
           const Spacer(),
           GestureDetector(
             onTap: _isLoading ? null : _createEventAndNavigate,
             child: AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                padding: EdgeInsets.symmetric(
+                    horizontal: 24.w, vertical: 14.h), // .w .h EKLENDİ
                 constraints: BoxConstraints(
                     maxWidth: MediaQuery.of(context).size.width * 0.45),
                 decoration: BoxDecoration(
                     color: _primaryDark,
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(14.r), // .r EKLENDİ
                     boxShadow: [
                       BoxShadow(
                           color: _primaryDark.withOpacity(0.3),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4))
+                          blurRadius: 12.r, // .r EKLENDİ
+                          offset: Offset(0, 4.h)) // .h EKLENDİ
                     ]),
                 child: _isLoading
                     ? Row(
                         mainAxisSize: MainAxisSize.min,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                            const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(
+                            SizedBox(
+                                width: 16.w, // .w EKLENDİ
+                                height: 16.w, // .w EKLENDİ
+                                child: const CircularProgressIndicator(
                                     color: Colors.white, strokeWidth: 2)),
-                            const SizedBox(width: 10),
+                            SizedBox(width: 10.w), // .w EKLENDİ
                             Flexible(
                                 child: Text("create_creating".tr(),
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                         color: Colors.white,
-                                        fontSize: 14,
+                                        fontSize: 14.sp, // .sp EKLENDİ
                                         fontWeight: FontWeight.w600),
                                     overflow: TextOverflow.ellipsis))
                           ])
                     : Row(mainAxisSize: MainAxisSize.min, children: [
                         Text("create_btn_create".tr(),
-                            style: const TextStyle(
+                            style: TextStyle(
                                 color: Colors.white,
-                                fontWeight: FontWeight.bold)),
-                        const SizedBox(width: 8),
-                        const Icon(Icons.arrow_forward_rounded,
-                            color: Colors.white, size: 18)
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14.sp)), // .sp EKLENDİ
+                        SizedBox(width: 8.w), // .w EKLENDİ
+                        Icon(Icons.arrow_forward_rounded,
+                            color: Colors.white, size: 18.sp) // .sp EKLENDİ
                       ])),
           ),
         ],
@@ -773,8 +816,9 @@ SwitchListTile(
       context: context,
       backgroundColor: _surfaceWhite,
       isScrollControlled: true, // İçeriğe göre esnemesini sağlar
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      shape: RoundedRectangleBorder(
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(24.r)), // .r EKLENDİ
       ),
       builder: (BuildContext context) {
         return StatefulBuilder(
@@ -789,19 +833,20 @@ SwitchListTile(
                   await _pickDateTime(isStart);
                   setSheetState(() {});
                 },
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(16.r), // .r EKLENDİ
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  padding: EdgeInsets.symmetric(
+                      horizontal: 16.w, vertical: 16.h), // .w .h EKLENDİ
                   decoration: BoxDecoration(
                     color: _bgLight,
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(16.r), // .r EKLENDİ
                     border: Border.all(color: Colors.grey.shade200),
                   ),
                   child: Row(
                     children: [
                       // Modern İkon Kutusu
                       Container(
-                        padding: const EdgeInsets.all(10),
+                        padding: EdgeInsets.all(10.r), // .r EKLENDİ
                         decoration: BoxDecoration(
                           color: Colors.white,
                           shape: BoxShape.circle,
@@ -809,8 +854,8 @@ SwitchListTile(
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withOpacity(0.03),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
+                              blurRadius: 4.r, // .r EKLENDİ
+                              offset: Offset(0, 2.h), // .h EKLENDİ
                             )
                           ],
                         ),
@@ -819,10 +864,10 @@ SwitchListTile(
                               ? Icons.calendar_today_rounded
                               : Icons.event_available_rounded,
                           color: _primaryDark, // Artık renkli değil, tutarlı
-                          size: 20,
+                          size: 20.sp, // .sp EKLENDİ
                         ),
                       ),
-                      const SizedBox(width: 16),
+                      SizedBox(width: 16.w), // .w EKLENDİ
                       // Tarih Metinleri
                       Expanded(
                         child: Column(
@@ -831,15 +876,15 @@ SwitchListTile(
                             Text(label,
                                 style: TextStyle(
                                     color: _softGrey,
-                                    fontSize: 12,
+                                    fontSize: 12.sp, // .sp EKLENDİ
                                     fontWeight: FontWeight.w600)),
-                            const SizedBox(height: 4),
+                            SizedBox(height: 4.h), // .h EKLENDİ
                             Text(
                               dateFormat.format(date),
                               style: TextStyle(
                                 color: _primaryDark,
                                 fontWeight: FontWeight.bold,
-                                fontSize: 15,
+                                fontSize: 15.sp, // .sp EKLENDİ
                                 letterSpacing: -0.3,
                               ),
                             ),
@@ -848,7 +893,8 @@ SwitchListTile(
                       ),
                       // Yönlendirme Oku
                       Icon(Icons.arrow_forward_ios_rounded,
-                          size: 14, color: _softGrey.withOpacity(0.5)),
+                          size: 14.sp,
+                          color: _softGrey.withOpacity(0.5)), // .sp EKLENDİ
                     ],
                   ),
                 ),
@@ -857,10 +903,11 @@ SwitchListTile(
 
             return Padding(
               padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-                top: 12, // Handle için üst boşluk
-                left: 24,
-                right: 24,
+                bottom: MediaQuery.of(context).viewInsets.bottom +
+                    24.h, // .h EKLENDİ
+                top: 12.h, // .h EKLENDİ
+                left: 24.w, // .w EKLENDİ
+                right: 24.w, // .w EKLENDİ
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -869,41 +916,43 @@ SwitchListTile(
                   // --- 1. MODERN DRAG HANDLE (TUTMA ÇUBUĞU) ---
                   Center(
                     child: Container(
-                      width: 40,
-                      height: 4,
+                      width: 40.w, // .w EKLENDİ
+                      height: 4.h, // .h EKLENDİ
                       decoration: BoxDecoration(
                         color: Colors.grey.shade300,
-                        borderRadius: BorderRadius.circular(2),
+                        borderRadius: BorderRadius.circular(2.r), // .r EKLENDİ
                       ),
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  SizedBox(height: 24.h), // .h EKLENDİ
 
                   // Başlık
                   Row(
                     children: [
-                      Icon(Icons.tune_rounded, color: _primaryDark, size: 24),
-                      const SizedBox(width: 12),
+                      Icon(Icons.tune_rounded,
+                          color: _primaryDark, size: 24.sp), // .sp EKLENDİ
+                      SizedBox(width: 12.w), // .w EKLENDİ
                       Text("create_settings".tr(),
                           style: TextStyle(
-                              fontSize: 20,
+                              fontSize: 20.sp, // .sp EKLENDİ
                               fontWeight: FontWeight.bold,
                               color: _primaryDark)),
                     ],
                   ),
-                  const SizedBox(height: 24),
+                  SizedBox(height: 24.h), // .h EKLENDİ
 
                   // --- 2. SWITCH (DİĞERİYLE AYNI STİL) ---
                   Container(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    padding: EdgeInsets.symmetric(vertical: 4.h), // .h EKLENDİ
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(16.r), // .r EKLENDİ
                       border: Border.all(color: Colors.grey.shade100),
                     ),
                     child: SwitchListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-                      
+                      contentPadding:
+                          EdgeInsets.symmetric(horizontal: 16.w), // .w EKLENDİ
+
                       // --- RENK UYUMU BURADA SAĞLANDI ---
                       activeColor: _primaryDark,
                       activeTrackColor: _primaryDark.withOpacity(0.3),
@@ -917,13 +966,14 @@ SwitchListTile(
                           style: TextStyle(
                               fontWeight: FontWeight.w600,
                               color: _primaryDark,
-                              fontSize: 15)),
+                              fontSize: 15.sp)), // .sp EKLENDİ
                       // İsteğe bağlı açıklama ekleyebilirsiniz, boş durmasın diye ekledim
                       subtitle: Padding(
-                        padding: const EdgeInsets.only(top: 2.0),
+                        padding: EdgeInsets.only(top: 2.0.h), // .h EKLENDİ
                         child: Text(
                           "Katılımcılar isim girmek zorunda", // İsterseniz .tr() ekleyin
-                          style: TextStyle(color: _softGrey, fontSize: 12),
+                          style: TextStyle(
+                              color: _softGrey, fontSize: 12.sp), // .sp EKLENDİ
                         ),
                       ),
                       value: _isNicknameRequired,
@@ -933,24 +983,24 @@ SwitchListTile(
                       },
                     ),
                   ),
-                  
-                  const SizedBox(height: 24),
+
+                  SizedBox(height: 24.h), // .h EKLENDİ
 
                   // --- 3. MODERN TARİH ALANI ---
                   Text("create_event_time".tr(),
                       style: TextStyle(
                           fontWeight: FontWeight.w700,
                           color: _primaryDark,
-                          fontSize: 14)),
-                  const SizedBox(height: 12),
-                  
+                          fontSize: 14.sp)), // .sp EKLENDİ
+                  SizedBox(height: 12.h), // .h EKLENDİ
+
                   // Başlangıç Kartı
                   buildDateCard("create_start".tr(), _startDate, true),
-                  const SizedBox(height: 12),
+                  SizedBox(height: 12.h), // .h EKLENDİ
                   // Bitiş Kartı
                   buildDateCard("create_end".tr(), _endDate, false),
 
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16.h), // .h EKLENDİ
                 ],
               ),
             );
@@ -978,21 +1028,25 @@ SwitchListTile(
                     itemBuilder: (context, index) =>
                         _buildQuestionCard(index))),
             Padding(
-                padding: const EdgeInsets.symmetric(vertical: 10),
+                padding: EdgeInsets.symmetric(vertical: 10.h), // .h EKLENDİ
                 child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: List.generate(
                         _questions.length,
                         (index) => AnimatedContainer(
                             duration: const Duration(milliseconds: 300),
-                            margin: const EdgeInsets.symmetric(horizontal: 3),
-                            height: 6,
-                            width: _activeIndex == index ? 24 : 6,
+                            margin: EdgeInsets.symmetric(
+                                horizontal: 3.w), // .w EKLENDİ
+                            height: 6.h, // .h EKLENDİ
+                            width: _activeIndex == index
+                                ? 24.w
+                                : 6.w, // .w EKLENDİ
                             decoration: BoxDecoration(
                                 color: _activeIndex == index
                                     ? _primaryDark
                                     : _softGrey.withOpacity(0.3),
-                                borderRadius: BorderRadius.circular(3)))))),
+                                borderRadius: BorderRadius.circular(
+                                    3.r)))))), // .r EKLENDİ
             Padding(
                 padding: EdgeInsets.only(
                     bottom: MediaQuery.of(context).viewInsets.bottom),

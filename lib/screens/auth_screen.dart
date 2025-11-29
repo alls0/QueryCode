@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // Firestore eklendi
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart'; // <-- EKLENDİ
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -16,9 +17,9 @@ class _AuthScreenState extends State<AuthScreen> {
   // Form Verileri
   String _email = '';
   String _password = '';
-  String _firstName = ''; // Yeni
-  String _lastName = ''; // Yeni
-  String _username = ''; // Yeni
+  String _firstName = '';
+  String _lastName = '';
+  String _username = '';
 
   // UI Durumları
   bool _isLogin = true;
@@ -46,14 +47,12 @@ class _AuthScreenState extends State<AuthScreen> {
         );
       } else {
         // --- KAYIT OL ---
-        // 1. Kullanıcıyı Firebase Auth'da oluştur
         final userCredential =
             await FirebaseAuth.instance.createUserWithEmailAndPassword(
           email: _email,
           password: _password,
         );
 
-        // 2. Ekstra bilgileri Firestore'a kaydet
         await FirebaseFirestore.instance
             .collection('users')
             .doc(userCredential.user!.uid)
@@ -64,52 +63,46 @@ class _AuthScreenState extends State<AuthScreen> {
           'email': _email,
           'uid': userCredential.user!.uid,
           'createdAt': FieldValue.serverTimestamp(),
-          'role': 'user', // İleride admin vs. eklemek isterseniz
+          'role': 'user',
         });
 
-        // 3. Firebase Auth profilindeki "Display Name"i güncelle (İsteğe bağlı ama önerilir)
         await userCredential.user!.updateDisplayName("$_firstName $_lastName");
       }
 
-      // İşlem başarılıysa ekranı kapat
       if (mounted) Navigator.of(context).pop();
     } on FirebaseAuthException catch (e) {
       debugPrint("Firebase Auth Error Code: ${e.code}");
-      String message = 'auth_error_generic'.tr(); // Varsayılan: Genel Hata
+      String message = 'auth_error_generic'.tr();
 
       if (e.code == 'user-not-found') {
         message = 'auth_register_required'.tr();
       } else if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
         message = 'auth_wrong_password'.tr();
       } else if (e.code == 'email-already-in-use') {
-        message =
-            'auth_email_in_use'.tr(); // 🔥 Bu en sık karşılaşılan hatadır.
+        message = 'auth_email_in_use'.tr();
       } else if (e.code == 'weak-password') {
         message = 'auth_weak_password'.tr();
       } else if (e.code == 'invalid-email') {
         message = 'auth_email_invalid'.tr();
       } else if (e.code == 'channel-error') {
-        // Genellikle mobil cihazda olmayan bir işlemi çağırmaktan kaynaklanır
         message = 'auth_channel_error'.tr();
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(message),
+          content: Text(message, style: TextStyle(fontSize: 14.sp)), // .sp
           backgroundColor: Colors.redAccent,
-          // ...
         ),
       );
     } catch (e) {
-      // ⚡ Beklenmeyen diğer hatalar (Örn: İnternet bağlantısı yok, Firestore yazma hatası)
       ScaffoldMessenger.of(context).showSnackBar(
-        // Artık generic olarak "Hata: $e" yerine kullanıcı dostu bir mesaj gösteriyoruz.
         SnackBar(
-          content: Text("auth_unexpected_error".tr()),
+          content: Text("auth_unexpected_error".tr(),
+              style: TextStyle(fontSize: 14.sp)), // .sp
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10.r)), // .r
         ),
       );
     } finally {
@@ -126,7 +119,8 @@ class _AuthScreenState extends State<AuthScreen> {
           // --- 1. ANA İÇERİK ---
           Center(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+              padding: EdgeInsets.symmetric(
+                  horizontal: 24.w, vertical: 40.h), // .w .h
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -135,35 +129,34 @@ class _AuthScreenState extends State<AuthScreen> {
                     tag: 'app_logo',
                     child: Image.asset(
                       'assets/images/logo4.png',
-                      height:
-                          140, // Logo biraz küçültüldü, form uzadığı için yer açtık
+                      height: 140.h, // .h
                       errorBuilder: (context, error, stackTrace) {
                         return Icon(Icons.qr_code_2,
-                            size: 80, color: _primaryBlue);
+                            size: 80.sp, color: _primaryBlue); // .sp
                       },
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  SizedBox(height: 20.h), // .h
 
                   // Başlıklar
                   Text(
                     _isLogin ? "auth_welcome".tr() : "auth_create_account".tr(),
                     style: TextStyle(
-                      fontSize: 26,
+                      fontSize: 26.sp, // .sp
                       fontWeight: FontWeight.w800,
                       color: _primaryColor,
                       letterSpacing: -0.5,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  SizedBox(height: 8.h), // .h
                   Text(
                     _isLogin ? "auth_welcome_sub".tr() : "auth_create_sub".tr(),
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: 14.sp, // .sp
                       color: Colors.grey[600],
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  SizedBox(height: 24.h), // .h
 
                   // Form
                   Form(
@@ -176,8 +169,7 @@ class _AuthScreenState extends State<AuthScreen> {
                             children: [
                               Expanded(
                                 child: _buildModernInput(
-                                  label: 'auth_name'
-                                      .tr(), // Çeviri anahtarı ekleyin
+                                  label: 'auth_name'.tr(),
                                   icon: Icons.person_outline,
                                   onSaved: (value) =>
                                       _firstName = value!.trim(),
@@ -188,7 +180,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                   },
                                 ),
                               ),
-                              const SizedBox(width: 12),
+                              SizedBox(width: 12.w), // .w
                               Expanded(
                                 child: _buildModernInput(
                                   label: 'auth_surname'.tr(),
@@ -203,7 +195,7 @@ class _AuthScreenState extends State<AuthScreen> {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 12),
+                          SizedBox(height: 12.h), // .h
                           _buildModernInput(
                             label: 'auth_username'.tr(),
                             icon: Icons.alternate_email,
@@ -214,7 +206,7 @@ class _AuthScreenState extends State<AuthScreen> {
                               return null;
                             },
                           ),
-                          const SizedBox(height: 12),
+                          SizedBox(height: 12.h), // .h
                         ],
 
                         // --- ORTAK ALANLAR (EMAIL & PASSWORD) ---
@@ -230,7 +222,7 @@ class _AuthScreenState extends State<AuthScreen> {
                             return null;
                           },
                         ),
-                        const SizedBox(height: 12),
+                        SizedBox(height: 12.h), // .h
                         _buildModernInput(
                           label: 'auth_password'.tr(),
                           icon: Icons.lock_outline,
@@ -249,7 +241,7 @@ class _AuthScreenState extends State<AuthScreen> {
                             });
                           },
                         ),
-                        const SizedBox(height: 24),
+                        SizedBox(height: 24.h), // .h
 
                         if (_isLoading)
                           CircularProgressIndicator(color: _primaryBlue)
@@ -262,24 +254,25 @@ class _AuthScreenState extends State<AuthScreen> {
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: _primaryColor,
                                   foregroundColor: Colors.white,
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 16),
+                                  padding: EdgeInsets.symmetric(
+                                      vertical: 16.h), // .h
                                   elevation: 2,
                                   shadowColor: _primaryColor.withOpacity(0.4),
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16),
+                                    borderRadius:
+                                        BorderRadius.circular(16.r), // .r
                                   ),
                                 ),
                                 child: Text(
                                   _isLogin
                                       ? 'auth_login'.tr()
                                       : 'auth_register'.tr(),
-                                  style: const TextStyle(
-                                      fontSize: 16,
+                                  style: TextStyle(
+                                      fontSize: 16.sp, // .sp
                                       fontWeight: FontWeight.bold),
                                 ),
                               ),
-                              const SizedBox(height: 16),
+                              SizedBox(height: 16.h), // .h
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
@@ -287,7 +280,9 @@ class _AuthScreenState extends State<AuthScreen> {
                                     _isLogin
                                         ? "auth_no_account_text".tr()
                                         : "auth_have_account_text".tr(),
-                                    style: TextStyle(color: Colors.grey[600]),
+                                    style: TextStyle(
+                                        color: Colors.grey[600],
+                                        fontSize: 14.sp), // .sp
                                   ),
                                   TextButton(
                                     onPressed: () {
@@ -303,6 +298,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                       style: TextStyle(
                                         color: _primaryBlue,
                                         fontWeight: FontWeight.bold,
+                                        fontSize: 14.sp, // .sp
                                       ),
                                     ),
                                   ),
@@ -324,31 +320,31 @@ class _AuthScreenState extends State<AuthScreen> {
             left: 0,
             child: SafeArea(
               child: Padding(
-                padding: const EdgeInsets.all(12.0),
+                padding: EdgeInsets.all(12.0.r), // .r
                 child: InkWell(
                   onTap: () {
                     if (Navigator.of(context).canPop()) {
                       Navigator.of(context).pop();
                     }
                   },
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(12.r), // .r
                   child: Container(
-                    padding: const EdgeInsets.all(10),
+                    padding: EdgeInsets.all(10.r), // .r
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(12.r), // .r
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withOpacity(0.05),
-                          blurRadius: 10,
-                          offset: const Offset(0, 2),
+                          blurRadius: 10.r, // .r
+                          offset: Offset(0, 2.h), // .h
                         ),
                       ],
                     ),
                     child: Icon(
                       Icons.arrow_back_ios_new_rounded,
                       color: _primaryColor,
-                      size: 22,
+                      size: 22.sp, // .sp
                     ),
                   ),
                 ),
@@ -374,40 +370,42 @@ class _AuthScreenState extends State<AuthScreen> {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(16.r), // .r
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            blurRadius: 10.r, // .r
+            offset: Offset(0, 4.h), // .h
           ),
         ],
       ),
       child: TextFormField(
         obscureText: obscureText,
         keyboardType: keyboardType,
-        style: const TextStyle(fontWeight: FontWeight.w500),
+        style: TextStyle(fontWeight: FontWeight.w500, fontSize: 16.sp), // .sp
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: TextStyle(color: Colors.grey[500]),
-          prefixIcon: Icon(icon, color: Colors.grey[400]),
+          labelStyle:
+              TextStyle(color: Colors.grey[500], fontSize: 14.sp), // .sp
+          prefixIcon: Icon(icon, color: Colors.grey[400], size: 24.sp), // .sp
           suffixIcon: isPassword
               ? IconButton(
                   icon: Icon(
                     obscureText ? Icons.visibility_off : Icons.visibility,
                     color: Colors.grey[400],
+                    size: 24.sp, // .sp
                   ),
                   onPressed: onToggleVisibility,
                 )
               : null,
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(16.r), // .r
             borderSide: BorderSide.none,
           ),
           filled: true,
           fillColor: Colors.white,
           contentPadding:
-              const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h), // .w .h
         ),
         validator: validator,
         onSaved: onSaved,

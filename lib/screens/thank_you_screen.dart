@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart'; // <-- EKLENDİ
 
 class ThankYouScreen extends StatelessWidget {
   const ThankYouScreen({super.key});
@@ -16,12 +17,12 @@ class ThankYouScreen extends StatelessWidget {
       backgroundColor: bgColor,
       body: Center(
         child: Padding(
-          padding: const EdgeInsets.all(32.0),
+          padding: EdgeInsets.all(32.0.r), // .r
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                padding: const EdgeInsets.all(24),
+                padding: EdgeInsets.all(24.r), // .r
                 decoration: BoxDecoration(
                   color: Colors.white,
                   shape: BoxShape.circle,
@@ -29,39 +30,40 @@ class ThankYouScreen extends StatelessWidget {
                   boxShadow: [
                     BoxShadow(
                         color: successColor.withOpacity(0.1),
-                        blurRadius: 20,
-                        spreadRadius: 5)
+                        blurRadius: 20.r, // .r
+                        spreadRadius: 5.r) // .r
                   ],
                 ),
-                child: const Icon(Icons.check_rounded,
-                    color: successColor, size: 64),
+                child: Icon(Icons.check_rounded,
+                    color: successColor, size: 64.sp), // .sp
               ),
-              const SizedBox(height: 32),
+              SizedBox(height: 32.h), // .h
               Text(
                 "thanks_title".tr(),
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                    fontSize: 28,
+                style: TextStyle(
+                    fontSize: 28.sp, // .sp
                     fontWeight: FontWeight.w800,
                     color: primaryColor),
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: 12.h), // .h
               Text(
                 "thanks_subtitle".tr(),
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+                style: TextStyle(
+                    fontSize: 16.sp, color: Colors.grey.shade600), // .sp
               ),
-              const SizedBox(height: 48),
+              SizedBox(height: 48.h), // .h
               if (!kIsWeb)
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryColor,
                     foregroundColor: Colors.white,
                     elevation: 0,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 48, vertical: 20),
+                    padding: EdgeInsets.symmetric(
+                        horizontal: 48.w, vertical: 20.h), // .w .h
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30)),
+                        borderRadius: BorderRadius.circular(30.r)), // .r
                   ),
                   onPressed: () {
                     Navigator.of(context).popUntil((route) => route.isFirst);

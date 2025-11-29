@@ -11,6 +11,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart'; // <-- EKLENDİ
 
 class QRResultScreen extends StatefulWidget {
   final String eventId;
@@ -39,9 +40,7 @@ class _QRResultScreenState extends State<QRResultScreen> {
     super.initState();
   }
 
-  // --- ÇIKIŞ KONTROL MANTIĞI ---
- // --- ÇIKIŞ KONTROL MANTIĞI (MODERN DIALOG) ---
- // --- ÇIKIŞ KONTROL MANTIĞI (YENİLENMİŞ TASARIM) ---
+  // --- ÇIKIŞ KONTROL MANTIĞI (YENİLENMİŞ TASARIM) ---
   Future<bool> _onWillPop() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) return true;
@@ -50,17 +49,17 @@ class _QRResultScreenState extends State<QRResultScreen> {
       context: context,
       builder: (context) => Dialog(
         backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+        insetPadding: EdgeInsets.symmetric(horizontal: 24.w), // .w EKLENDİ
         child: Container(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(24.r), // .r EKLENDİ
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(24.r), // .r EKLENDİ
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.1),
-                blurRadius: 16,
-                offset: const Offset(0, 4),
+                blurRadius: 16.r, // .r EKLENDİ
+                offset: Offset(0, 4.h), // .h EKLENDİ
               ),
             ],
           ),
@@ -69,42 +68,42 @@ class _QRResultScreenState extends State<QRResultScreen> {
             children: [
               // 1. İKON (Kırmızı yerine TURUNCU/AMBER)
               Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFF7ED), // Çok açık turuncu (Amber-50)
+                padding: EdgeInsets.all(16.r), // .r EKLENDİ
+                decoration: const BoxDecoration(
+                  color: Color(0xFFFFF7ED), // Çok açık turuncu (Amber-50)
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.priority_high_rounded, // Sade ünlem ikonu
-                  color: Color(0xFFF97316), // Canlı Turuncu (Orange-500)
-                  size: 32,
+                  color: const Color(0xFFF97316), // Canlı Turuncu (Orange-500)
+                  size: 32.sp, // .sp EKLENDİ
                 ),
               ),
-              const SizedBox(height: 20),
+              SizedBox(height: 20.h), // .h EKLENDİ
 
               // 2. BAŞLIK
               Text(
-                "alert_warning".tr(), 
+                "alert_warning".tr(),
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 20,
+                  fontSize: 20.sp, // .sp EKLENDİ
                   fontWeight: FontWeight.bold,
                   color: _primaryColor,
                 ),
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: 12.h), // .h EKLENDİ
 
               // 3. AÇIKLAMA
               Text(
                 "result_guest_warning".tr(),
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 14.sp, // .sp EKLENDİ
                   color: _secondaryColor,
                   height: 1.5,
                 ),
               ),
-              const SizedBox(height: 24),
+              SizedBox(height: 24.h), // .h EKLENDİ
 
               // 4. BUTONLAR
               Row(
@@ -114,9 +113,11 @@ class _QRResultScreenState extends State<QRResultScreen> {
                     child: TextButton(
                       onPressed: () => Navigator.of(context).pop(false),
                       style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        padding:
+                            EdgeInsets.symmetric(vertical: 14.h), // .h EKLENDİ
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius:
+                              BorderRadius.circular(12.r), // .r EKLENDİ
                         ),
                       ),
                       child: Text(
@@ -124,29 +125,34 @@ class _QRResultScreenState extends State<QRResultScreen> {
                         style: TextStyle(
                           color: _secondaryColor,
                           fontWeight: FontWeight.w600,
+                          fontSize: 14.sp, // .sp EKLENDİ
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  
+                  SizedBox(width: 12.w), // .w EKLENDİ
+
                   // Çıkış (Kırmızı yerine UYGULAMA RENGİ)
                   Expanded(
                     child: ElevatedButton(
                       onPressed: () => Navigator.of(context).pop(true),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: _primaryColor, // Diğer butonlarla aynı renk
+                        backgroundColor:
+                            _primaryColor, // Diğer butonlarla aynı renk
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        padding:
+                            EdgeInsets.symmetric(vertical: 14.h), // .h EKLENDİ
                         elevation: 0,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius:
+                              BorderRadius.circular(12.r), // .r EKLENDİ
                         ),
                       ),
                       child: Text(
                         "result_exit".tr(),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.bold,
+                          fontSize: 14.sp, // .sp EKLENDİ
                         ),
                       ),
                     ),
@@ -259,7 +265,6 @@ class _QRResultScreenState extends State<QRResultScreen> {
     }
   }
 
-  // --- YENİ: ETKİNLİK ZAMAN BİLGİSİ KARTI ---
   // --- YENİ: MODERN ZAMAN BİLGİSİ KARTI ---
   Widget _buildTimeInfoCard(Timestamp? startTs, Timestamp? endTs) {
     if (startTs == null || endTs == null) return const SizedBox.shrink();
@@ -287,7 +292,7 @@ class _QRResultScreenState extends State<QRResultScreen> {
       // BİTTİ -> Gri (Pasif/Geçmiş hissi için en doğrusu)
       statusText = "result_time_ended".tr();
       statusColor = const Color(0xFF718096); // Cool Gray
-      statusBgColor = const Color(0xFFF7FAFC); 
+      statusBgColor = const Color(0xFFF7FAFC);
       statusIcon = Icons.flag_rounded;
     } else {
       // AKTİF -> ARTIK MAVİ (Uygulamanın Ana Rengi)
@@ -295,54 +300,57 @@ class _QRResultScreenState extends State<QRResultScreen> {
       final diff = end.difference(now);
       statusText = "result_time_end_left".tr(
           namedArgs: {'h': '${diff.inHours}', 'm': '${diff.inMinutes % 60}'});
-      
+
       // AuthScreen'deki _primaryBlue ile aynı ton (0xFF3182CE)
-      statusColor = const Color(0xFF3182CE); 
+      statusColor = const Color(0xFF3182CE);
       // Çok uçuk mavi arka plan
-      statusBgColor = const Color(0xFFEBF8FF); 
+      statusBgColor = const Color(0xFFEBF8FF);
       statusIcon = Icons.timer_rounded;
     }
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(20),
+      margin: EdgeInsets.symmetric(
+          horizontal: 16.w, vertical: 8.h), // .w .h EKLENDİ
+      padding: EdgeInsets.all(20.r), // .r EKLENDİ
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(20.r), // .r EKLENDİ
         border: Border.all(color: _borderColor),
         boxShadow: [
           BoxShadow(
               color: Colors.black.withOpacity(0.02),
-              blurRadius: 10,
-              offset: const Offset(0, 4))
+              blurRadius: 10.r, // .r EKLENDİ
+              offset: Offset(0, 4.h)) // .h EKLENDİ
         ],
       ),
       child: Column(
         children: [
           // 1. ÜST KISIM: DURUM ROZETİ (Artık Mavi)
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding: EdgeInsets.symmetric(
+                horizontal: 12.w, vertical: 6.h), // .w .h EKLENDİ
             decoration: BoxDecoration(
               color: statusBgColor,
-              borderRadius: BorderRadius.circular(30),
+              borderRadius: BorderRadius.circular(30.r), // .r EKLENDİ
               border: Border.all(color: statusColor.withOpacity(0.2)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(statusIcon, color: statusColor, size: 16),
-                const SizedBox(width: 8),
+                Icon(statusIcon,
+                    color: statusColor, size: 16.sp), // .sp EKLENDİ
+                SizedBox(width: 8.w), // .w EKLENDİ
                 Text(
                   statusText,
                   style: TextStyle(
                       color: statusColor,
                       fontWeight: FontWeight.w700,
-                      fontSize: 13),
+                      fontSize: 13.sp), // .sp EKLENDİ
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: 20.h), // .h EKLENDİ
 
           // 2. ALT KISIM: ZAMAN ÇİZELGESİ (Aynı kalıyor)
           Row(
@@ -354,39 +362,43 @@ class _QRResultScreenState extends State<QRResultScreen> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.play_circle_outline_rounded, 
-                          size: 14, color: _secondaryColor),
-                      const SizedBox(width: 4),
+                      Icon(Icons.play_circle_outline_rounded,
+                          size: 14.sp, color: _secondaryColor), // .sp EKLENDİ
+                      SizedBox(width: 4.w), // .w EKLENDİ
                       Text("create_start".tr().toUpperCase(),
                           style: TextStyle(
-                              color: _secondaryColor, 
-                              fontSize: 10, 
+                              color: _secondaryColor,
+                              fontSize: 10.sp, // .sp EKLENDİ
                               fontWeight: FontWeight.bold,
                               letterSpacing: 0.5)),
                     ],
                   ),
-                  const SizedBox(height: 4),
+                  SizedBox(height: 4.h), // .h EKLENDİ
                   Text(dateFormat.format(start),
                       style: TextStyle(
-                          color: _primaryColor, 
+                          color: _primaryColor,
                           fontWeight: FontWeight.w700,
-                          fontSize: 15)),
+                          fontSize: 15.sp)), // .sp EKLENDİ
                 ],
               ),
-              
+
               // Ortadaki Ok
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  padding: EdgeInsets.symmetric(horizontal: 12.w), // .w EKLENDİ
                   child: Row(
                     children: [
-                      Expanded(child: Divider(color: _borderColor, thickness: 1)),
+                      Expanded(
+                          child: Divider(color: _borderColor, thickness: 1)),
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        child: Icon(Icons.arrow_forward_rounded, 
-                            color: _secondaryColor.withOpacity(0.4), size: 16),
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 4.w), // .w EKLENDİ
+                        child: Icon(Icons.arrow_forward_rounded,
+                            color: _secondaryColor.withOpacity(0.4),
+                            size: 16.sp), // .sp EKLENDİ
                       ),
-                      Expanded(child: Divider(color: _borderColor, thickness: 1)),
+                      Expanded(
+                          child: Divider(color: _borderColor, thickness: 1)),
                     ],
                   ),
                 ),
@@ -400,21 +412,21 @@ class _QRResultScreenState extends State<QRResultScreen> {
                     children: [
                       Text("create_end".tr().toUpperCase(),
                           style: TextStyle(
-                              color: _secondaryColor, 
-                              fontSize: 10, 
+                              color: _secondaryColor,
+                              fontSize: 10.sp, // .sp EKLENDİ
                               fontWeight: FontWeight.bold,
                               letterSpacing: 0.5)),
-                      const SizedBox(width: 4),
-                      Icon(Icons.stop_circle_outlined, 
-                          size: 14, color: _secondaryColor),
+                      SizedBox(width: 4.w), // .w EKLENDİ
+                      Icon(Icons.stop_circle_outlined,
+                          size: 14.sp, color: _secondaryColor), // .sp EKLENDİ
                     ],
                   ),
-                  const SizedBox(height: 4),
+                  SizedBox(height: 4.h), // .h EKLENDİ
                   Text(dateFormat.format(end),
                       style: TextStyle(
-                          color: _primaryColor, 
+                          color: _primaryColor,
                           fontWeight: FontWeight.w700,
-                          fontSize: 15)),
+                          fontSize: 15.sp)), // .sp EKLENDİ
                 ],
               ),
             ],
@@ -426,7 +438,8 @@ class _QRResultScreenState extends State<QRResultScreen> {
 
   Widget _buildHeader(BuildContext context, String title) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+      padding: EdgeInsets.symmetric(
+          horizontal: 20.w, vertical: 20.h), // .w .h EKLENDİ
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -437,19 +450,20 @@ class _QRResultScreenState extends State<QRResultScreen> {
               }
             },
             child: Container(
-              padding: const EdgeInsets.all(12),
+              padding: EdgeInsets.all(12.r), // .r EKLENDİ
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(14.r), // .r EKLENDİ
                 border: Border.all(color: _borderColor),
                 boxShadow: [
                   BoxShadow(
                       color: Colors.black.withOpacity(0.04),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4))
+                      blurRadius: 10.r, // .r EKLENDİ
+                      offset: Offset(0, 4.h)) // .h EKLENDİ
                 ],
               ),
-              child: Icon(Icons.close_rounded, size: 20, color: _primaryColor),
+              child: Icon(Icons.close_rounded,
+                  size: 20.sp, color: _primaryColor), // .sp EKLENDİ
             ),
           ),
           Expanded(
@@ -457,23 +471,23 @@ class _QRResultScreenState extends State<QRResultScreen> {
               children: [
                 Text("qr_live_results".tr().toUpperCase(),
                     style: TextStyle(
-                        fontSize: 10,
+                        fontSize: 10.sp, // .sp EKLENDİ
                         fontWeight: FontWeight.w800,
                         letterSpacing: 1.5,
                         color: _secondaryColor)),
-                const SizedBox(height: 4),
+                SizedBox(height: 4.h), // .h EKLENDİ
                 Text(title.isEmpty ? "Results" : title,
                     textAlign: TextAlign.center,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                        fontSize: 18,
+                        fontSize: 18.sp, // .sp EKLENDİ
                         fontWeight: FontWeight.bold,
                         color: _primaryColor)),
               ],
             ),
           ),
-          const SizedBox(width: 48),
+          SizedBox(width: 48.w), // .w EKLENDİ (Dengelemek için)
         ],
       ),
     );
@@ -481,17 +495,17 @@ class _QRResultScreenState extends State<QRResultScreen> {
 
   Widget _buildViewSelector() {
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-      padding: const EdgeInsets.all(4),
+      margin: EdgeInsets.fromLTRB(16.w, 0, 16.w, 16.h), // .w .h EKLENDİ
+      padding: EdgeInsets.all(4.r), // .r EKLENDİ
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(16.r), // .r EKLENDİ
         border: Border.all(color: _borderColor),
         boxShadow: [
           BoxShadow(
               color: Colors.black.withOpacity(0.03),
-              blurRadius: 10,
-              offset: const Offset(0, 4))
+              blurRadius: 10.r, // .r EKLENDİ
+              offset: Offset(0, 4.h)) // .h EKLENDİ
         ],
       ),
       child: Row(
@@ -505,23 +519,20 @@ class _QRResultScreenState extends State<QRResultScreen> {
           else
             label = "view_mode_chart".tr();
 
-          // Kısa gösterim için (List/Stats/Chart uzun olabilir, UI'a sığması için kontrol edilebilir)
-          // Burada basitçe ilk kelimeyi alabiliriz veya direkt tr çevirisini basabiliriz.
-
           return Expanded(
             child: GestureDetector(
               onTap: () => setState(() => _currentViewMode = mode),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(vertical: 10),
+                padding: EdgeInsets.symmetric(vertical: 10.h), // .h EKLENDİ
                 decoration: BoxDecoration(
                     color: isSelected ? _primaryColor : Colors.transparent,
-                    borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(12.r)), // .r EKLENDİ
                 child: Text(label,
                     textAlign: TextAlign.center,
                     style: TextStyle(
                         fontWeight: FontWeight.w600,
-                        fontSize: 14,
+                        fontSize: 14.sp, // .sp EKLENDİ
                         color: isSelected ? Colors.white : _secondaryColor)),
               ),
             ),
@@ -536,22 +547,23 @@ class _QRResultScreenState extends State<QRResultScreen> {
     return ListView.separated(
       physics: const NeverScrollableScrollPhysics(),
       shrinkWrap: true,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: EdgeInsets.symmetric(
+          horizontal: 16.w, vertical: 8.h), // .w .h EKLENDİ
       itemCount: results.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      separatorBuilder: (_, __) => SizedBox(height: 12.h), // .h EKLENDİ
       itemBuilder: (context, index) {
         final name = results.keys.elementAt(index);
         final answers = (results[name] as List<dynamic>? ?? []);
         return Container(
           decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(16.r), // .r EKLENDİ
               border: Border.all(color: _borderColor),
               boxShadow: [
                 BoxShadow(
                     color: Colors.black.withOpacity(0.02),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2))
+                    blurRadius: 4.r, // .r EKLENDİ
+                    offset: Offset(0, 2.h)) // .h EKLENDİ
               ]),
           child: ExpansionTile(
             shape: const Border(),
@@ -561,19 +573,26 @@ class _QRResultScreenState extends State<QRResultScreen> {
                 backgroundColor: const Color(0xFFEDF2F7),
                 child: Text(name.isNotEmpty ? name[0].toUpperCase() : "?",
                     style: TextStyle(
-                        color: _primaryColor, fontWeight: FontWeight.bold))),
+                        color: _primaryColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16.sp))), // .sp EKLENDİ
             title: Text(name,
                 style: TextStyle(
-                    fontWeight: FontWeight.w700, color: _primaryColor)),
+                    fontWeight: FontWeight.w700,
+                    color: _primaryColor,
+                    fontSize: 16.sp)), // .sp EKLENDİ
             children: answers.map((a) {
               if (a is Map) {
                 return ListTile(
                     title: Text(a['question']?.toString() ?? '',
-                        style: TextStyle(fontSize: 13, color: _secondaryColor)),
+                        style: TextStyle(
+                            fontSize: 13.sp,
+                            color: _secondaryColor)), // .sp EKLENDİ
                     trailing: Text(a['answer']?.toString() ?? '',
                         style: TextStyle(
                             fontWeight: FontWeight.w600,
-                            color: _primaryColor)));
+                            color: _primaryColor,
+                            fontSize: 14.sp))); // .sp EKLENDİ
               }
               return const SizedBox.shrink();
             }).toList(),
@@ -588,7 +607,8 @@ class _QRResultScreenState extends State<QRResultScreen> {
     return ListView(
       physics: const NeverScrollableScrollPhysics(),
       shrinkWrap: true,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: EdgeInsets.symmetric(
+          horizontal: 16.w, vertical: 8.h), // .w .h EKLENDİ
       children: stats.entries.map((entry) {
         final question = entry.key;
         final entryValue = entry.value as Map<dynamic, dynamic>? ?? {};
@@ -598,33 +618,33 @@ class _QRResultScreenState extends State<QRResultScreen> {
             (entryValue['totalVotes'] as num?)?.toInt() ?? 0;
 
         return Container(
-          margin: const EdgeInsets.only(bottom: 16),
-          padding: const EdgeInsets.all(24),
+          margin: EdgeInsets.only(bottom: 16.h), // .h EKLENDİ
+          padding: EdgeInsets.all(24.r), // .r EKLENDİ
           decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(16.r), // .r EKLENDİ
               border: Border.all(color: _borderColor),
               boxShadow: [
                 BoxShadow(
                     color: Colors.black.withOpacity(0.02),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2))
+                    blurRadius: 4.r, // .r EKLENDİ
+                    offset: Offset(0, 2.h)) // .h EKLENDİ
               ]),
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(question,
                 style: TextStyle(
-                    fontSize: 16,
+                    fontSize: 16.sp, // .sp EKLENDİ
                     fontWeight: FontWeight.w700,
                     color: _primaryColor)),
-            const SizedBox(height: 20),
+            SizedBox(height: 20.h), // .h EKLENDİ
             ...options.entries.map((opt) {
               final optValue = opt.value as Map<dynamic, dynamic>? ?? {};
               final rawPercent =
                   (optValue['percent'] as num?)?.toDouble() ?? 0.0;
               final percent = (rawPercent / 100).clamp(0.0, 1.0);
               return Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
+                  padding: EdgeInsets.only(bottom: 16.h), // .h EKLENDİ
                   child: Column(children: [
                     Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -633,30 +653,33 @@ class _QRResultScreenState extends State<QRResultScreen> {
                               child: Text(opt.key,
                                   style: TextStyle(
                                       color: _primaryColor,
+                                      fontSize: 14.sp, // .sp EKLENDİ
                                       fontWeight: FontWeight.w500))),
                           Text("${(percent * 100).toStringAsFixed(0)}%",
                               style: TextStyle(
                                   color: _primaryColor,
+                                  fontSize: 14.sp, // .sp EKLENDİ
                                   fontWeight: FontWeight.bold))
                         ]),
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8.h), // .h EKLENDİ
                     ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
+                        borderRadius: BorderRadius.circular(4.r), // .r EKLENDİ
                         child: LinearProgressIndicator(
                             value: percent.isNaN ? 0.0 : percent,
-                            minHeight: 8,
+                            minHeight: 8.h, // .h EKLENDİ
                             backgroundColor: const Color(0xFFEDF2F7),
                             valueColor: AlwaysStoppedAnimation(_primaryColor))),
                   ]));
             }),
-            Divider(height: 32, color: _borderColor),
+            Divider(height: 32.h, color: _borderColor), // .h EKLENDİ
             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
               Text("total_respondents".tr(),
-                  style: TextStyle(color: _secondaryColor, fontSize: 14)),
+                  style: TextStyle(
+                      color: _secondaryColor, fontSize: 14.sp)), // .sp EKLENDİ
               Text("$questionTotalVotes",
                   style: TextStyle(
                       color: _primaryColor,
-                      fontSize: 16,
+                      fontSize: 16.sp, // .sp EKLENDİ
                       fontWeight: FontWeight.bold))
             ])
           ]),
@@ -671,9 +694,11 @@ class _QRResultScreenState extends State<QRResultScreen> {
     return ListView.separated(
       physics: const NeverScrollableScrollPhysics(),
       shrinkWrap: true,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: EdgeInsets.symmetric(
+          horizontal: 16.w, vertical: 8.h), // .w .h EKLENDİ
       itemCount: keys.length,
-      separatorBuilder: (context, index) => const SizedBox(height: 16),
+      separatorBuilder: (context, index) =>
+          SizedBox(height: 16.h), // .h EKLENDİ
       itemBuilder: (context, index) {
         final question = keys[index];
         final entryValue = stats[question] as Map<dynamic, dynamic>? ?? {};
@@ -692,7 +717,7 @@ class _QRResultScreenState extends State<QRResultScreen> {
             BarChartRodData(
                 toY: count.toDouble(),
                 color: _primaryColor,
-                width: 22,
+                width: 22.w, // .w EKLENDİ
                 borderRadius:
                     const BorderRadius.vertical(top: Radius.circular(4)),
                 backDrawRodData: BackgroundBarChartRodData(
@@ -703,28 +728,28 @@ class _QRResultScreenState extends State<QRResultScreen> {
         }).toList();
 
         return Container(
-          height: 350,
-          padding: const EdgeInsets.all(24),
+          height: 350.h, // .h EKLENDİ
+          padding: EdgeInsets.all(24.r), // .r EKLENDİ
           decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(16.r), // .r EKLENDİ
               border: Border.all(color: _borderColor),
               boxShadow: [
                 BoxShadow(
                     color: Colors.black.withOpacity(0.03),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2))
+                    blurRadius: 4.r, // .r EKLENDİ
+                    offset: Offset(0, 2.h)) // .h EKLENDİ
               ]),
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(question,
                 style: TextStyle(
-                    fontSize: 16,
+                    fontSize: 16.sp, // .sp EKLENDİ
                     fontWeight: FontWeight.w700,
                     color: _primaryColor),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis),
-            const SizedBox(height: 24),
+            SizedBox(height: 24.h), // .h EKLENDİ
             Expanded(
                 child: BarChart(BarChartData(
                     maxY: maxY,
@@ -753,21 +778,22 @@ class _QRResultScreenState extends State<QRResultScreen> {
                                   final text =
                                       options.keys.elementAt(val.toInt());
                                   return Padding(
-                                      padding: const EdgeInsets.only(top: 12.0),
+                                      padding: EdgeInsets.only(
+                                          top: 12.0.h), // .h EKLENDİ
                                       child: Text(
                                           text.length > 8
                                               ? "${text.substring(0, 8)}.."
                                               : text,
                                           style: TextStyle(
-                                              fontSize: 11,
+                                              fontSize: 11.sp, // .sp EKLENDİ
                                               color: _secondaryColor)));
                                 },
-                                reservedSize: 30))),
+                                reservedSize: 30.h))), // .h EKLENDİ
                     barTouchData: BarTouchData(
                         touchTooltipData: BarTouchTooltipData(
                             getTooltipColor: (_) => Colors.white,
                             tooltipBorder: BorderSide(color: _borderColor),
-                            tooltipPadding: const EdgeInsets.all(8),
+                            tooltipPadding: EdgeInsets.all(8.r), // .r EKLENDİ
                             tooltipMargin: 8,
                             getTooltipItem: (group, groupIndex, rod, rodIndex) {
                               if (group.x < 0 || group.x >= options.length)
@@ -779,31 +805,32 @@ class _QRResultScreenState extends State<QRResultScreen> {
                                   TextStyle(
                                       color: _secondaryColor,
                                       fontWeight: FontWeight.w500,
-                                      fontSize: 12),
+                                      fontSize: 12.sp), // .sp EKLENDİ
                                   children: <TextSpan>[
                                     TextSpan(
                                         text: '${rod.toY.toInt()} Votes',
                                         style: TextStyle(
                                             color: _primaryColor,
-                                            fontSize: 14,
+                                            fontSize: 14.sp, // .sp EKLENDİ
                                             fontWeight: FontWeight.bold))
                                   ]);
                             }))))),
             Container(
-                margin: const EdgeInsets.only(top: 24),
-                padding: const EdgeInsets.only(top: 16),
+                margin: EdgeInsets.only(top: 24.h), // .h EKLENDİ
+                padding: EdgeInsets.only(top: 16.h), // .h EKLENDİ
                 decoration: BoxDecoration(
                     border: Border(top: BorderSide(color: _borderColor))),
                 child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text("total_respondents".tr(),
-                          style:
-                              TextStyle(color: _secondaryColor, fontSize: 14)),
+                          style: TextStyle(
+                              color: _secondaryColor,
+                              fontSize: 14.sp)), // .sp EKLENDİ
                       Text("$totalVotes",
                           style: TextStyle(
                               color: _primaryColor,
-                              fontSize: 16,
+                              fontSize: 16.sp, // .sp EKLENDİ
                               fontWeight: FontWeight.bold))
                     ]))
           ]),
@@ -815,9 +842,12 @@ class _QRResultScreenState extends State<QRResultScreen> {
   Widget _buildEmptyState() {
     return Center(
         child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-      Icon(Icons.bar_chart_rounded, size: 65, color: Colors.grey.shade300),
-      const SizedBox(height: 16),
-      Text("result_no_data".tr(), style: TextStyle(color: Colors.grey.shade400))
+      Icon(Icons.bar_chart_rounded,
+          size: 65.sp, color: Colors.grey.shade300), // .sp EKLENDİ
+      SizedBox(height: 16.h), // .h EKLENDİ
+      Text("result_no_data".tr(),
+          style: TextStyle(
+              color: Colors.grey.shade400, fontSize: 14.sp)) // .sp EKLENDİ
     ]));
   }
 
@@ -869,18 +899,20 @@ class _QRResultScreenState extends State<QRResultScreen> {
 
                           // QR KODU VE LİNK KARTI
                           Container(
-                            margin: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 8),
-                            padding: const EdgeInsets.all(16),
+                            margin: EdgeInsets.symmetric(
+                                horizontal: 16.w,
+                                vertical: 8.h), // .w .h EKLENDİ
+                            padding: EdgeInsets.all(16.r), // .r EKLENDİ
                             decoration: BoxDecoration(
                                 color: Colors.white,
-                                borderRadius: BorderRadius.circular(16),
+                                borderRadius:
+                                    BorderRadius.circular(16.r), // .r EKLENDİ
                                 border: Border.all(color: _borderColor),
                                 boxShadow: [
                                   BoxShadow(
                                       color: Colors.black.withOpacity(0.02),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 4))
+                                      blurRadius: 8.r, // .r EKLENDİ
+                                      offset: Offset(0, 4.h)) // .h EKLENDİ
                                 ]),
                             child: Column(
                               children: [
@@ -888,7 +920,7 @@ class _QRResultScreenState extends State<QRResultScreen> {
                                   key: _qrKey,
                                   child: QrImageView(
                                     data: qrData,
-                                    size: 180,
+                                    size: 180.w, // .w EKLENDİ (QR boyutu)
                                     backgroundColor: Colors.white,
                                     dataModuleStyle: QrDataModuleStyle(
                                         dataModuleShape:
@@ -899,18 +931,19 @@ class _QRResultScreenState extends State<QRResultScreen> {
                                         color: _primaryColor),
                                   ),
                                 ),
-                                const SizedBox(height: 16),
+                                SizedBox(height: 16.h), // .h EKLENDİ
                                 SizedBox(
                                   width: double.infinity,
                                   child: ElevatedButton.icon(
                                     onPressed: () =>
                                         _shareQrCode(currentTitle, qrData),
                                     icon: Icon(Icons.ios_share_rounded,
-                                        color: _primaryColor, size: 22),
+                                        color: _primaryColor,
+                                        size: 22.sp), // .sp EKLENDİ
                                     label: Text("share_qr".tr(),
                                         style: TextStyle(
                                             color: _primaryColor,
-                                            fontSize: 16,
+                                            fontSize: 16.sp, // .sp EKLENDİ
                                             fontWeight: FontWeight.bold,
                                             letterSpacing: 0.5)),
                                     style: ElevatedButton.styleFrom(
@@ -920,31 +953,32 @@ class _QRResultScreenState extends State<QRResultScreen> {
                                             _primaryColor.withOpacity(0.1),
                                         elevation: 0,
                                         side: BorderSide.none,
-                                        padding: const EdgeInsets.symmetric(
-                                            vertical: 18),
+                                        padding: EdgeInsets.symmetric(
+                                            vertical: 18.h), // .h EKLENDİ
                                         shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(16))),
+                                            borderRadius: BorderRadius.circular(
+                                                16.r))), // .r EKLENDİ
                                   ),
                                 ),
-                                const SizedBox(height: 12),
+                                SizedBox(height: 12.h), // .h EKLENDİ
                                 SizedBox(
                                   width: double.infinity,
                                   child: TextButton.icon(
                                     onPressed: () => _copyLink(qrData),
                                     icon: Icon(Icons.copy_rounded,
-                                        color: _secondaryColor, size: 20),
+                                        color: _secondaryColor,
+                                        size: 20.sp), // .sp EKLENDİ
                                     label: Text("copy_link".tr(),
                                         style: TextStyle(
                                             color: _secondaryColor,
                                             fontWeight: FontWeight.w600,
-                                            fontSize: 14)),
+                                            fontSize: 14.sp)), // .sp EKLENDİ
                                     style: TextButton.styleFrom(
-                                        padding: const EdgeInsets.symmetric(
-                                            vertical: 12),
+                                        padding: EdgeInsets.symmetric(
+                                            vertical: 12.h), // .h EKLENDİ
                                         shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(12),
+                                            borderRadius: BorderRadius.circular(
+                                                12.r), // .r EKLENDİ
                                             side: BorderSide(
                                                 color: _borderColor))),
                                   ),
@@ -952,16 +986,16 @@ class _QRResultScreenState extends State<QRResultScreen> {
                               ],
                             ),
                           ),
-                          const SizedBox(height: 8),
+                          SizedBox(height: 8.h), // .h EKLENDİ
                           _buildViewSelector(),
-                          const SizedBox(height: 8),
+                          SizedBox(height: 8.h), // .h EKLENDİ
                           if (_currentViewMode == 'LIST')
                             _buildListView(results)
                           else if (_currentViewMode == 'STATS')
                             _buildStatsView(statsData)
                           else
                             _buildChartView(statsData),
-                          const SizedBox(height: 20),
+                          SizedBox(height: 20.h), // .h EKLENDİ
                         ],
                       ),
                     ),

@@ -6,6 +6,7 @@ import 'answering_screen.dart';
 import 'nickname_entry_screen.dart';
 import 'dart:math' as math;
 import 'package:intl/intl.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart'; // <-- EKLENDİ
 
 class QrScannerScreen extends StatefulWidget {
   const QrScannerScreen({super.key});
@@ -51,7 +52,6 @@ class _QrScannerScreenState extends State<QrScannerScreen>
     });
 
     // Web linkinize göre burayı düzenleyebilirsiniz
-    // Örn: https://querycode.web.app/event/ veya sadece /event/ kontrolü
     const String targetBaseUrl = '/event/';
 
     // Basit bir kontrol: URL içinde "/event/" geçiyor mu?
@@ -146,8 +146,9 @@ class _QrScannerScreenState extends State<QrScannerScreen>
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text("alert_warning".tr()),
-        content: Text(message),
+        title: Text("alert_warning".tr(),
+            style: TextStyle(fontSize: 18.sp)), // .sp
+        content: Text(message, style: TextStyle(fontSize: 14.sp)), // .sp
         actions: [
           TextButton(
             onPressed: () {
@@ -159,7 +160,8 @@ class _QrScannerScreenState extends State<QrScannerScreen>
                 });
               }
             },
-            child: Text("alert_ok".tr()),
+            child:
+                Text("alert_ok".tr(), style: TextStyle(fontSize: 14.sp)), // .sp
           )
         ],
       ),
@@ -201,7 +203,7 @@ class _QrScannerScreenState extends State<QrScannerScreen>
                 width: scanWindowWidth,
                 height: scanWindowHeight,
               ),
-              borderRadius: 20,
+              borderRadius: 20.r, // .r EKLENDİ
             ),
             child: Container(),
           ),
@@ -222,14 +224,14 @@ class _QrScannerScreenState extends State<QrScannerScreen>
                         left: 0,
                         right: 0,
                         child: Container(
-                          height: 2,
+                          height: 2.h, // .h EKLENDİ
                           decoration: BoxDecoration(
                             color: Colors.blueAccent,
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.blueAccent.withOpacity(0.5),
-                                blurRadius: 10,
-                                spreadRadius: 2,
+                                blurRadius: 10.r, // .r EKLENDİ
+                                spreadRadius: 2.r, // .r EKLENDİ
                               ),
                             ],
                           ),
@@ -244,47 +246,48 @@ class _QrScannerScreenState extends State<QrScannerScreen>
 
           // 4. KATMAN: ÜST BİLGİ VE GERİ BUTONU
           Positioned(
-            top: 50,
-            left: 20,
-            right: 20,
+            top: 50.h, // .h EKLENDİ
+            left: 20.w, // .w EKLENDİ
+            right: 20.w, // .w EKLENDİ
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 GestureDetector(
                   onTap: () => Navigator.pop(context),
                   child: Container(
-                    padding: const EdgeInsets.all(10),
+                    padding: EdgeInsets.all(10.r), // .r EKLENDİ
                     decoration: BoxDecoration(
                       color: Colors.black.withOpacity(0.5),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.arrow_back_ios_new_rounded,
-                        color: Colors.white, size: 20),
+                    child: Icon(Icons.arrow_back_ios_new_rounded,
+                        color: Colors.white, size: 20.sp), // .sp EKLENDİ
                   ),
                 ),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: EdgeInsets.symmetric(
+                      horizontal: 16.w, vertical: 8.h), // .w .h EKLENDİ
                   decoration: BoxDecoration(
                     color: Colors.black.withOpacity(0.5),
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(20.r), // .r EKLENDİ
                   ),
                   child: Text(
                     "scanner_title".tr(),
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
+                      fontSize: 14.sp, // .sp EKLENDİ
                     ),
                   ),
                 ),
-                const SizedBox(width: 40),
+                SizedBox(width: 40.w), // .w EKLENDİ (Dengelemek için boşluk)
               ],
             ),
           ),
 
           // 5. KATMAN: ALT YAZI VE KONTROLLER
           Positioned(
-            bottom: 50,
+            bottom: 50.h, // .h EKLENDİ
             left: 0,
             right: 0,
             child: Column(
@@ -293,19 +296,19 @@ class _QrScannerScreenState extends State<QrScannerScreen>
                   "scan_align".tr(),
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.8),
-                    fontSize: 14,
+                    fontSize: 14.sp, // .sp EKLENDİ
                     letterSpacing: 0.5,
                   ),
                 ),
-                const SizedBox(height: 30),
+                SizedBox(height: 30.h), // .h EKLENDİ
                 // Buton Paneli
                 Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 40),
-                  padding:
-                      const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+                  margin: EdgeInsets.symmetric(horizontal: 40.w), // .w EKLENDİ
+                  padding: EdgeInsets.symmetric(
+                      vertical: 10.h, horizontal: 20.w), // .h .w EKLENDİ
                   decoration: BoxDecoration(
                     color: Colors.black.withOpacity(0.6),
-                    borderRadius: BorderRadius.circular(30),
+                    borderRadius: BorderRadius.circular(30.r), // .r EKLENDİ
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -324,17 +327,17 @@ class _QrScannerScreenState extends State<QrScannerScreen>
                               ? Icons.flash_on_rounded
                               : Icons.flash_off_rounded,
                           color: _isFlashOn ? Colors.yellow : Colors.white,
-                          size: 28,
+                          size: 28.sp, // .sp EKLENDİ
                         ),
                       ),
-                      const SizedBox(width: 30),
+                      SizedBox(width: 30.w), // .w EKLENDİ
                       // Kamera Değiştir
                       IconButton(
                         onPressed: () => _cameraController.switchCamera(),
-                        icon: const Icon(
+                        icon: Icon(
                           Icons.flip_camera_ios_rounded,
                           color: Colors.white,
-                          size: 28,
+                          size: 28.sp, // .sp EKLENDİ
                         ),
                       ),
                     ],

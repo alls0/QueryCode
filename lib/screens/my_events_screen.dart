@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'qr_result_screen.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart'; // <-- EKLENDİ
 
 class MyEventsScreen extends StatefulWidget {
   const MyEventsScreen({super.key});
@@ -59,15 +60,13 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
           // Ham veriyi al
           List<DocumentSnapshot> allDocs = querySnapshot.docs;
 
-          // Filtreleri Uygula (Favori ve Sıralama)
-          // 1. Favori Filtresi
+          // Filtreleri Uygula
           if (_showOnlyFavorites) {
             allDocs = allDocs
                 .where((doc) => _favoriteEventIds.contains(doc.id))
                 .toList();
           }
 
-          // 2. Sıralama
           allDocs.sort((a, b) {
             Timestamp timeA = (a.data() as Map<String, dynamic>)['createdAt'] ??
                 Timestamp(0, 0);
@@ -90,17 +89,14 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
 
   // --- SİLME İŞLEMİ ---
   Future<void> _deleteEvent(String eventId) async {
-    // Firestore'dan sil
     await FirebaseFirestore.instance.collection('events').doc(eventId).delete();
 
-    // Favorilerden sil
     final prefs = await SharedPreferences.getInstance();
     if (_favoriteEventIds.contains(eventId)) {
       _favoriteEventIds.remove(eventId);
       await prefs.setStringList('favorite_events', _favoriteEventIds);
     }
 
-    // Listeyi yenile
     _loadData();
 
     if (mounted) {
@@ -121,24 +117,29 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
         return AlertDialog(
           backgroundColor: Colors.white,
           surfaceTintColor: Colors.transparent,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20.r)), // .r
           title: Text("are_you_sure".tr(),
-              style:
-                  TextStyle(color: _primaryColor, fontWeight: FontWeight.bold)),
+              style: TextStyle(
+                  color: _primaryColor,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18.sp)), // .sp
           content: Text("delete_confirm_text".tr(),
-              style: TextStyle(color: _secondaryColor)),
+              style: TextStyle(color: _secondaryColor, fontSize: 14.sp)), // .sp
           actions: <Widget>[
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child:
-                  Text("cancel".tr(), style: TextStyle(color: _secondaryColor)),
+              child: Text("cancel".tr(),
+                  style: TextStyle(
+                      color: _secondaryColor, fontSize: 14.sp)), // .sp
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(true),
               child: Text("delete".tr(),
-                  style: const TextStyle(
-                      color: Colors.red, fontWeight: FontWeight.bold)),
+                  style: TextStyle(
+                      color: Colors.red,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14.sp)), // .sp
             ),
           ],
         );
@@ -161,7 +162,6 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
       }
     });
     await prefs.setStringList('favorite_events', _favoriteEventIds);
-    // Listeyi tekrar yükle/filtrele
     _loadData();
   }
 
@@ -170,23 +170,23 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)), // .r
       ),
       builder: (context) {
         return StatefulBuilder(builder: (context, setModalState) {
           return Padding(
-            padding: const EdgeInsets.all(24.0),
+            padding: EdgeInsets.all(24.0.r), // .r
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text("filter_sort_title".tr(),
                     style: TextStyle(
-                        fontSize: 20,
+                        fontSize: 20.sp, // .sp
                         fontWeight: FontWeight.bold,
                         color: _primaryColor)),
-                const SizedBox(height: 10),
+                SizedBox(height: 10.h), // .h
                 Divider(color: _borderColor),
 
                 // FAVORİ FİLTRESİ
@@ -195,36 +195,43 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
                   contentPadding: EdgeInsets.zero,
                   title: Text("only_favorites".tr(),
                       style: TextStyle(
-                          fontWeight: FontWeight.w600, color: _primaryColor)),
-                  secondary: const Icon(Icons.star_rounded,
-                      color: Colors.amber, size: 28),
+                          fontWeight: FontWeight.w600,
+                          color: _primaryColor,
+                          fontSize: 16.sp)), // .sp
+                  secondary: Icon(Icons.star_rounded,
+                      color: Colors.amber, size: 28.sp), // .sp
                   value: _showOnlyFavorites,
                   onChanged: (val) {
                     setModalState(() => _showOnlyFavorites = val);
                     this.setState(() => _showOnlyFavorites = val);
-                    _loadData(); // Yeniden yükle/filtrele
+                    _loadData();
                   },
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: 8.h), // .h
 
                 // SIRALAMA FİLTRESİ
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   title: Text("sort_label".tr(),
                       style: TextStyle(
-                          fontWeight: FontWeight.w600, color: _primaryColor)),
+                          fontWeight: FontWeight.w600,
+                          color: _primaryColor,
+                          fontSize: 16.sp)), // .sp
                   leading: Icon(
                       _sortNewestFirst
                           ? Icons.arrow_downward_rounded
                           : Icons.arrow_upward_rounded,
-                      color: _primaryColor),
+                      color: _primaryColor,
+                      size: 24.sp), // .sp
                   trailing: DropdownButton<bool>(
                     value: _sortNewestFirst,
                     underline: Container(),
                     icon: Icon(Icons.keyboard_arrow_down_rounded,
-                        color: _primaryColor),
+                        color: _primaryColor, size: 24.sp), // .sp
                     style: TextStyle(
-                        color: _primaryColor, fontWeight: FontWeight.bold),
+                        color: _primaryColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14.sp), // .sp
                     items: [
                       DropdownMenuItem(
                           value: true, child: Text("sort_newest".tr())),
@@ -240,7 +247,7 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
                     },
                   ),
                 ),
-                const SizedBox(height: 20),
+                SizedBox(height: 20.h), // .h
               ],
             ),
           );
@@ -251,28 +258,28 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
 
   Widget _buildHeader() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+      padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 20.h), // .w .h
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           GestureDetector(
             onTap: () => Navigator.pop(context),
             child: Container(
-              padding: const EdgeInsets.all(12),
+              padding: EdgeInsets.all(12.r), // .r
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(14.r), // .r
                 border: Border.all(color: _borderColor),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.04),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
+                    blurRadius: 10.r, // .r
+                    offset: Offset(0, 4.h), // .h
                   ),
                 ],
               ),
               child: Icon(Icons.arrow_back_ios_new_rounded,
-                  size: 20, color: _primaryColor),
+                  size: 20.sp, color: _primaryColor), // .sp
             ),
           ),
           Column(
@@ -280,17 +287,17 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
               Text(
                 "myEventsButton".tr().toUpperCase(),
                 style: TextStyle(
-                  fontSize: 10,
+                  fontSize: 10.sp, // .sp
                   fontWeight: FontWeight.w800,
                   letterSpacing: 1.5,
                   color: _secondaryColor,
                 ),
               ),
-              const SizedBox(height: 4),
+              SizedBox(height: 4.h), // .h
               Text(
                 "events_title".tr(),
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: 18.sp, // .sp
                   fontWeight: FontWeight.bold,
                   color: _primaryColor,
                 ),
@@ -300,21 +307,21 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
           GestureDetector(
             onTap: _showFilterDialog,
             child: Container(
-              padding: const EdgeInsets.all(12),
+              padding: EdgeInsets.all(12.r), // .r
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(14.r), // .r
                 border: Border.all(color: _borderColor),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.04),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
+                    blurRadius: 10.r, // .r
+                    offset: Offset(0, 4.h), // .h
                   ),
                 ],
               ),
               child: Icon(Icons.filter_list_rounded,
-                  size: 20, color: _primaryColor),
+                  size: 20.sp, color: _primaryColor), // .sp
             ),
           ),
         ],
@@ -332,23 +339,23 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
         eventData['eventTitle'] ?? "${"events_prefix".tr()}${index + 1}";
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: EdgeInsets.only(bottom: 12.h), // .h
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(16.r), // .r
         border: Border.all(color: _borderColor),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.02),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
+            blurRadius: 4.r, // .r
+            offset: Offset(0, 2.h), // .h
           )
         ],
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(16.r), // .r
           onTap: () {
             Navigator.push(
               context,
@@ -357,19 +364,20 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
             );
           },
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding:
+                EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h), // .w .h
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: EdgeInsets.all(12.r), // .r
                   decoration: BoxDecoration(
                     color: const Color(0xFFEDF2F7),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(12.r), // .r
                   ),
                   child: Icon(Icons.qr_code_2_rounded,
-                      color: _primaryColor, size: 24),
+                      color: _primaryColor, size: 24.sp), // .sp
                 ),
-                const SizedBox(width: 16),
+                SizedBox(width: 16.w), // .w
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -378,18 +386,18 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
                         title,
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          fontSize: 16,
+                          fontSize: 16.sp, // .sp
                           color: _primaryColor,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 4),
+                      SizedBox(height: 4.h), // .h
                       Text(
                         "${date.day}/${date.month}/${date.year} • ${date.hour}:${date.minute.toString().padLeft(2, '0')}",
                         style: TextStyle(
                           color: _secondaryColor,
-                          fontSize: 12,
+                          fontSize: 12.sp, // .sp
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -407,7 +415,7 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
                         color: isFavorite
                             ? Colors.amber
                             : _secondaryColor.withOpacity(0.5),
-                        size: 24,
+                        size: 24.sp, // .sp
                       ),
                       onPressed: () => _toggleFavorite(eventId),
                     ),
@@ -415,7 +423,7 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
                       icon: Icon(
                         Icons.delete_outline_rounded,
                         color: Colors.red.shade300,
-                        size: 22,
+                        size: 22.sp, // .sp
                       ),
                       onPressed: () => _confirmAndDelete(eventId),
                     ),
@@ -446,20 +454,21 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(Icons.event_note_rounded,
-                                  size: 64, color: _borderColor),
-                              const SizedBox(height: 16),
+                                  size: 64.sp, color: _borderColor), // .sp
+                              SizedBox(height: 16.h), // .h
                               Text("events_no_events".tr(),
                                   style: TextStyle(
                                       color: _secondaryColor,
+                                      fontSize: 14.sp, // .sp
                                       fontWeight: FontWeight.w600)),
                               if (_showOnlyFavorites)
                                 Padding(
-                                  padding: const EdgeInsets.only(top: 8.0),
+                                  padding: EdgeInsets.only(top: 8.0.h), // .h
                                   child: Text("no_favorites_hint".tr(),
                                       style: TextStyle(
                                           color:
                                               _secondaryColor.withOpacity(0.6),
-                                          fontSize: 13)),
+                                          fontSize: 13.sp)), // .sp
                                 ),
                             ],
                           ),
@@ -468,8 +477,8 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
                           children: [
                             Expanded(
                               child: ListView.builder(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 20),
+                                padding: EdgeInsets.symmetric(
+                                    horizontal: 20.w), // .w
                                 itemCount: _filteredEvents.length,
                                 itemBuilder: (context, index) {
                                   return _buildEventCard(

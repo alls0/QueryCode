@@ -7,6 +7,7 @@ import 'my_events_screen.dart';
 import 'auth_screen.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart'; // <-- EKLENDİ
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -33,8 +34,9 @@ class HomeScreen extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      shape: RoundedRectangleBorder(
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(24.r)), // .r Eklendi
       ),
       builder: (context) {
         return StatefulBuilder(
@@ -42,9 +44,9 @@ class HomeScreen extends StatelessWidget {
             return Padding(
               padding: EdgeInsets.only(
                 bottom: MediaQuery.of(context).viewInsets.bottom,
-                left: 24,
-                right: 24,
-                top: 24,
+                left: 24.w, // .w Eklendi
+                right: 24.w, // .w Eklendi
+                top: 24.h, // .h Eklendi
               ),
               child: SingleChildScrollView(
                 child: Column(
@@ -57,28 +59,33 @@ class HomeScreen extends StatelessWidget {
                         Text(
                           "feedback_title".tr(),
                           style: TextStyle(
-                            fontSize: 20,
+                            fontSize: 20.sp, // .sp Eklendi
                             fontWeight: FontWeight.bold,
                             color: primaryDark,
                           ),
                         ),
                         IconButton(
-                          icon: Icon(Icons.close, color: Colors.grey.shade400),
+                          icon: Icon(Icons.close,
+                              color: Colors.grey.shade400, size: 24.sp),
                           onPressed: () => Navigator.pop(context),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 20),
+                    SizedBox(height: 20.h), // .h Eklendi
                     Text("feedback_subject".tr(),
                         style: TextStyle(
-                            fontWeight: FontWeight.w600, color: primaryDark)),
-                    const SizedBox(height: 12),
+                            fontWeight: FontWeight.w600,
+                            color: primaryDark,
+                            fontSize: 14.sp)), // Font boyutu eklendi
+                    SizedBox(height: 12.h), // .h Eklendi
                     Wrap(
-                      spacing: 10,
+                      spacing: 10.w, // .w Eklendi
+                      runSpacing: 10.h,
                       children: feedbackTypes.map((type) {
                         bool isSelected = selectedType == type;
                         return ChoiceChip(
-                          label: Text(type),
+                          label: Text(type,
+                              style: TextStyle(fontSize: 12.sp)), // Font boyutu
                           selected: isSelected,
                           selectedColor: primaryBlue.withOpacity(0.1),
                           labelStyle: TextStyle(
@@ -86,6 +93,7 @@ class HomeScreen extends StatelessWidget {
                             fontWeight: isSelected
                                 ? FontWeight.bold
                                 : FontWeight.normal,
+                            fontSize: 12.sp,
                           ),
                           backgroundColor: bgLight,
                           side: BorderSide(
@@ -93,7 +101,8 @@ class HomeScreen extends StatelessWidget {
                                 isSelected ? primaryBlue : Colors.transparent,
                           ),
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8)),
+                              borderRadius:
+                                  BorderRadius.circular(8.r)), // .r Eklendi
                           onSelected: (bool selected) {
                             if (selected) {
                               setModalState(() => selectedType = type);
@@ -102,7 +111,7 @@ class HomeScreen extends StatelessWidget {
                         );
                       }).toList(),
                     ),
-                    const SizedBox(height: 24),
+                    SizedBox(height: 24.h), // .h Eklendi
                     TextField(
                       controller: feedbackController,
                       maxLength: 500,
@@ -112,36 +121,40 @@ class HomeScreen extends StatelessWidget {
                           setModalState(() => inputErrorText = null);
                         }
                       },
+                      style: TextStyle(fontSize: 14.sp),
                       decoration: InputDecoration(
                         hintText: "feedback_placeholder".tr(),
-                        hintStyle: TextStyle(color: Colors.grey.shade400),
+                        hintStyle: TextStyle(
+                            color: Colors.grey.shade400, fontSize: 14.sp),
                         filled: true,
                         fillColor: bgLight,
                         errorText: inputErrorText,
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius:
+                              BorderRadius.circular(16.r), // .r Eklendi
                           borderSide: BorderSide.none,
                         ),
                         focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius: BorderRadius.circular(16.r),
                           borderSide:
                               BorderSide(color: primaryBlue, width: 1.5),
                         ),
                         errorBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius: BorderRadius.circular(16.r),
                           borderSide: BorderSide(
                               color: Colors.red.shade300, width: 1.5),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    SizedBox(height: 12.h),
                     Center(
                         child: Text(
                             selectedRating > 0
                                 ? "$selectedRating ${"feedback_stars".tr()}"
                                 : "feedback_rate".tr(),
                             style: TextStyle(
-                                color: Colors.grey.shade600, fontSize: 12))),
+                                color: Colors.grey.shade600,
+                                fontSize: 12.sp))), // .sp Eklendi
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: List.generate(5, (index) {
@@ -150,7 +163,7 @@ class HomeScreen extends StatelessWidget {
                             index < selectedRating
                                 ? Icons.star_rounded
                                 : Icons.star_outline_rounded,
-                            size: 36,
+                            size: 36.sp, // .sp Eklendi
                             color: const Color(0xFFFFD700),
                           ),
                           onPressed: () {
@@ -162,15 +175,17 @@ class HomeScreen extends StatelessWidget {
                         );
                       }),
                     ),
-                    const SizedBox(height: 24),
+                    SizedBox(height: 24.h),
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: primaryDark,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          padding: EdgeInsets.symmetric(
+                              vertical: 16.h), // .h Eklendi
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
+                            borderRadius:
+                                BorderRadius.circular(14.r), // .r Eklendi
                           ),
                           elevation: 0,
                         ),
@@ -222,22 +237,22 @@ class HomeScreen extends StatelessWidget {
                                 }
                               },
                         child: isLoading
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
+                            ? SizedBox(
+                                width: 20.w,
+                                height: 20.w,
+                                child: const CircularProgressIndicator(
                                     color: Colors.white, strokeWidth: 2),
                               )
                             : Text(
                                 "feedback_send".tr(),
-                                style: const TextStyle(
+                                style: TextStyle(
                                     color: Colors.white,
-                                    fontSize: 16,
+                                    fontSize: 16.sp, // .sp Eklendi
                                     fontWeight: FontWeight.bold),
                               ),
                       ),
                     ),
-                    const SizedBox(height: 32),
+                    SizedBox(height: 32.h),
                   ],
                 ),
               ),
@@ -264,35 +279,44 @@ class HomeScreen extends StatelessWidget {
           return AlertDialog(
             backgroundColor: cardColor,
             surfaceTintColor: Colors.transparent,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24.r)),
             title: Row(
               children: [
-                const Icon(Icons.info_outline_rounded, color: primaryColor),
-                const SizedBox(width: 12),
+                Icon(Icons.info_outline_rounded,
+                    color: primaryColor, size: 24.sp),
+                SizedBox(width: 12.w),
                 Text("infoTitle".tr(),
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, color: textColor)),
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: textColor,
+                        fontSize: 18.sp)),
               ],
             ),
             content: SingleChildScrollView(
               child: ListBody(
                 children: <Widget>[
-                  Text("infoP1".tr(), style: const TextStyle(color: iconColor)),
-                  const SizedBox(height: 16),
+                  Text("infoP1".tr(),
+                      style: TextStyle(color: iconColor, fontSize: 14.sp)),
+                  SizedBox(height: 16.h),
                   Text("infoP2".tr(),
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold, color: textColor)),
-                  Divider(color: Colors.grey.shade200),
-                  Text("infoP3".tr(), style: const TextStyle(color: iconColor)),
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: textColor,
+                          fontSize: 14.sp)),
+                  Divider(color: Colors.grey.shade200, height: 24.h),
+                  Text("infoP3".tr(),
+                      style: TextStyle(color: iconColor, fontSize: 14.sp)),
                 ],
               ),
             ),
             actions: <Widget>[
               TextButton(
                 child: Text("closeButton".tr(),
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, color: primaryColor)),
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: primaryColor,
+                        fontSize: 14.sp)),
                 onPressed: () => Navigator.of(context).pop(),
               ),
             ],
@@ -306,8 +330,7 @@ class HomeScreen extends StatelessWidget {
       await FirebaseAuth.instance.signOut();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("auth_login_required_title"
-              .tr()), // "Giriş yapmalısınız" yerine "Çıkış yapıldı" mesajı verilebilir veya bu text generic kullanılabilir
+          content: Text("auth_login_required_title".tr()),
           backgroundColor: Colors.grey,
         ),
       );
@@ -322,12 +345,12 @@ class HomeScreen extends StatelessWidget {
           context: context,
           builder: (ctx) => Dialog(
             backgroundColor: Colors.transparent,
-            insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+            insetPadding: EdgeInsets.symmetric(horizontal: 24.w),
             child: Container(
-              padding: const EdgeInsets.all(24),
+              padding: EdgeInsets.all(24.r),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(24.r),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.1),
@@ -340,47 +363,47 @@ class HomeScreen extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(16),
+                    padding: EdgeInsets.all(16.r),
                     decoration: const BoxDecoration(
                       color: Colors.white,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.lock_person_rounded,
-                      color: Color(0xFF1A202C),
-                      size: 40,
+                      color: const Color(0xFF1A202C),
+                      size: 40.sp,
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  SizedBox(height: 10.h),
                   Text(
                     "auth_login_required_title".tr(),
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 20,
+                    style: TextStyle(
+                      fontSize: 20.sp,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF1A202C),
+                      color: const Color(0xFF1A202C),
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: 12.h),
                   Text(
                     "auth_login_required_desc".tr(),
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: 14.sp,
                       color: Colors.grey.shade600,
                       height: 1.5,
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  SizedBox(height: 24.h),
                   Row(
                     children: [
                       Expanded(
                         child: TextButton(
                           onPressed: () => Navigator.pop(ctx),
                           style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            padding: EdgeInsets.symmetric(vertical: 14.h),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(12.r),
                             ),
                           ),
                           child: Text(
@@ -388,11 +411,12 @@ class HomeScreen extends StatelessWidget {
                             style: TextStyle(
                               color: Colors.grey.shade600,
                               fontWeight: FontWeight.w600,
+                              fontSize: 14.sp,
                             ),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      SizedBox(width: 12.w),
                       Expanded(
                         child: ElevatedButton(
                           onPressed: () {
@@ -406,16 +430,17 @@ class HomeScreen extends StatelessWidget {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF1A202C),
                             foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            padding: EdgeInsets.symmetric(vertical: 14.h),
                             elevation: 0,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(12.r),
                             ),
                           ),
                           child: Text(
                             "auth_login".tr(),
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontWeight: FontWeight.bold,
+                              fontSize: 14.sp,
                             ),
                           ),
                         ),
@@ -439,9 +464,9 @@ class HomeScreen extends StatelessWidget {
       return GestureDetector(
         onTap: onTap,
         child: Container(
-          width: 44,
-          height: 44,
-          margin: const EdgeInsets.only(bottom: 12), // Alt alta boşluk
+          width: 44.w,
+          height: 44.w, // Kare olması için w kullanmak daha güvenli olabilir
+          margin: EdgeInsets.only(bottom: 12.h), // Alt alta boşluk
           decoration: BoxDecoration(
             color: Colors.white,
             shape: BoxShape.circle,
@@ -454,7 +479,7 @@ class HomeScreen extends StatelessWidget {
               ),
             ],
           ),
-          child: Icon(icon, color: iconColor, size: 22),
+          child: Icon(icon, color: iconColor, size: 22.sp),
         ),
       );
     }
@@ -463,7 +488,7 @@ class HomeScreen extends StatelessWidget {
       backgroundColor: backgroundColor,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -478,9 +503,9 @@ class HomeScreen extends StatelessWidget {
                     children: [
                       // 1. Dil Seçimi
                       PopupMenuButton<String>(
-                        offset: const Offset(0, 40),
+                        offset: Offset(0, 40.h),
                         shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16)),
+                            borderRadius: BorderRadius.circular(16.r)),
                         surfaceTintColor: Colors.white,
                         color: Colors.white,
                         onSelected: (String value) {
@@ -490,15 +515,19 @@ class HomeScreen extends StatelessWidget {
                             context.setLocale(const Locale('en'));
                         },
                         itemBuilder: (context) => [
-                          const PopupMenuItem(
-                              value: 'TR', child: Text('🇹🇷 Türkçe')),
-                          const PopupMenuItem(
-                              value: 'EN', child: Text('🇬🇧 English')),
+                          PopupMenuItem(
+                              value: 'TR',
+                              child: Text('🇹🇷 Türkçe',
+                                  style: TextStyle(fontSize: 14.sp))),
+                          PopupMenuItem(
+                              value: 'EN',
+                              child: Text('🇬🇧 English',
+                                  style: TextStyle(fontSize: 14.sp))),
                         ],
                         child: Container(
-                          width: 44,
-                          height: 44,
-                          margin: const EdgeInsets.only(bottom: 12),
+                          width: 44.w,
+                          height: 44.w,
+                          margin: EdgeInsets.only(bottom: 12.h),
                           decoration: BoxDecoration(
                             color: Colors.white,
                             shape: BoxShape.circle,
@@ -511,8 +540,8 @@ class HomeScreen extends StatelessWidget {
                               ),
                             ],
                           ),
-                          child: const Icon(Icons.language,
-                              color: Color(0xFF4A5568), size: 22),
+                          child: Icon(Icons.language,
+                              color: const Color(0xFF4A5568), size: 22.sp),
                         ),
                       ),
 
@@ -539,11 +568,11 @@ class HomeScreen extends StatelessWidget {
                         final User user = authSnapshot.data!;
 
                         return Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 6),
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 8.w, vertical: 6.h),
                           decoration: BoxDecoration(
                             color: Colors.white,
-                            borderRadius: BorderRadius.circular(30),
+                            borderRadius: BorderRadius.circular(30.r),
                             border: Border.all(color: Colors.grey.shade300),
                             boxShadow: [
                               BoxShadow(
@@ -571,20 +600,20 @@ class HomeScreen extends StatelessWidget {
                                         data['username'] ?? 'User';
 
                                     return Padding(
-                                      padding: const EdgeInsets.only(
-                                          left: 12, right: 8),
+                                      padding: EdgeInsets.only(
+                                          left: 12.w, right: 8.w),
                                       child: Text(
                                         username,
                                         style: GoogleFonts.outfit(
                                           fontWeight: FontWeight.bold,
                                           color: primaryColor,
-                                          fontSize: 15,
+                                          fontSize: 15.sp,
                                         ),
                                       ),
                                     );
                                   }
                                   // Yüklenirken veya veri yoksa sadece ikon görünür
-                                  return const SizedBox(width: 8);
+                                  return SizedBox(width: 8.w);
                                 },
                               ),
 
@@ -592,13 +621,13 @@ class HomeScreen extends StatelessWidget {
                               GestureDetector(
                                 onTap: () => _signOut(context),
                                 child: Container(
-                                  padding: const EdgeInsets.all(8),
+                                  padding: EdgeInsets.all(8.r),
                                   decoration: BoxDecoration(
                                     color: Colors.red.shade50,
                                     shape: BoxShape.circle,
                                   ),
                                   child: Icon(Icons.logout_rounded,
-                                      color: Colors.red.shade400, size: 20),
+                                      color: Colors.red.shade400, size: 20.sp),
                                 ),
                               ),
                             ],
@@ -612,11 +641,11 @@ class HomeScreen extends StatelessWidget {
                               MaterialPageRoute(
                                   builder: (context) => const AuthScreen())),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 12),
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 16.w, vertical: 12.h),
                             decoration: BoxDecoration(
                               color: primaryColor,
-                              borderRadius: BorderRadius.circular(20),
+                              borderRadius: BorderRadius.circular(20.r),
                               boxShadow: [
                                 BoxShadow(
                                   color: primaryColor.withOpacity(0.3),
@@ -627,14 +656,15 @@ class HomeScreen extends StatelessWidget {
                             ),
                             child: Row(
                               children: [
-                                const Icon(Icons.login_rounded,
-                                    color: Colors.white, size: 20),
-                                const SizedBox(width: 8),
+                                Icon(Icons.login_rounded,
+                                    color: Colors.white, size: 20.sp),
+                                SizedBox(width: 8.w),
                                 Text(
                                   "auth_login".tr(),
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     color: Colors.white,
                                     fontWeight: FontWeight.bold,
+                                    fontSize: 14.sp,
                                   ),
                                 ),
                               ],
@@ -648,7 +678,7 @@ class HomeScreen extends StatelessWidget {
               ),
 
               // --- LOGO ALANI (Biraz daha yukarı kaydı) ---
-              const SizedBox(height: 20),
+              SizedBox(height: 20.h),
               Center(
                 child: Column(
                   children: [
@@ -656,7 +686,7 @@ class HomeScreen extends StatelessWidget {
                       textAlign: TextAlign.center,
                       text: TextSpan(
                         style: GoogleFonts.outfit(
-                          fontSize: 44,
+                          fontSize: 44.sp, // BÜYÜK FONT ÖLÇEKLENDİ
                           height: 1.2,
                           letterSpacing: -1.0,
                         ),
@@ -678,10 +708,10 @@ class HomeScreen extends StatelessWidget {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    SizedBox(height: 20.h),
                     Container(
-                      width: 190,
-                      height: 190,
+                      width: 190.w, // LOGO BOYUTU ÖLÇEKLENDİ
+                      height: 190.w,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: Colors.white,
@@ -694,15 +724,15 @@ class HomeScreen extends StatelessWidget {
                           ),
                         ],
                       ),
-                      padding: const EdgeInsets.all(20),
+                      padding: EdgeInsets.all(20.r),
                       child: Image.asset('assets/images/logo4.png'),
                     ),
-                    const SizedBox(height: 32),
+                    SizedBox(height: 32.h),
                     Text(
                       "homeTitle".tr(),
                       textAlign: TextAlign.center,
                       style: GoogleFonts.outfit(
-                        fontSize: 24,
+                        fontSize: 24.sp,
                         color: primaryColor,
                         fontWeight: FontWeight.w600,
                         letterSpacing: -0.5,
@@ -723,25 +753,25 @@ class HomeScreen extends StatelessWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: primaryColor,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  padding: EdgeInsets.symmetric(vertical: 20.h),
                   elevation: 0,
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20)),
+                      borderRadius: BorderRadius.circular(20.r)),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.add_circle_outline_rounded, size: 26),
-                    const SizedBox(width: 12),
+                    Icon(Icons.add_circle_outline_rounded, size: 26.sp),
+                    SizedBox(width: 12.w),
                     Text(
                       "newQuestionButton".tr(),
-                      style: const TextStyle(
-                          fontSize: 18, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                          fontSize: 18.sp, fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: 16.h),
 
               Row(
                 children: [
@@ -754,45 +784,46 @@ class HomeScreen extends StatelessWidget {
                       style: OutlinedButton.styleFrom(
                         backgroundColor: Colors.white,
                         foregroundColor: primaryColor,
-                        padding: const EdgeInsets.symmetric(vertical: 20),
+                        padding: EdgeInsets.symmetric(vertical: 20.h),
                         side:
                             BorderSide(color: Colors.grey.shade300, width: 1.5),
                         shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20)),
+                            borderRadius: BorderRadius.circular(20.r)),
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.qr_code_scanner_rounded, size: 24),
-                          const SizedBox(width: 8),
+                          Icon(Icons.qr_code_scanner_rounded, size: 24.sp),
+                          SizedBox(width: 8.w),
                           Text(
                             "scanQRButton".tr(),
-                            style: const TextStyle(
-                                fontSize: 16, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                                fontSize: 16.sp, fontWeight: FontWeight.bold),
                           ),
                         ],
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  SizedBox(width: 12.w),
                   GestureDetector(
                     onTap: () => _handleMyEventsClick(context),
                     child: Container(
-                      width: 64,
-                      height: 64,
+                      width: 64.w,
+                      height: 64
+                          .w, // Butonların yüksekliğiyle orantılı olması için h yerine w kullanılabilir veya tersi. 64.h
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(20.r),
                         border:
                             Border.all(color: Colors.grey.shade300, width: 1.5),
                       ),
-                      child: const Icon(Icons.history_rounded,
-                          color: primaryColor, size: 28),
+                      child: Icon(Icons.history_rounded,
+                          color: primaryColor, size: 28.sp),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
+              SizedBox(height: 20.h),
             ],
           ),
         ),
