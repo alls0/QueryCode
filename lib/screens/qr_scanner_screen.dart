@@ -5,7 +5,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'answering_screen.dart';
 import 'nickname_entry_screen.dart';
 import 'dart:math' as math;
-import 'package:intl/intl.dart'; // Tarih formatı için eklendi
+import 'package:intl/intl.dart';
 
 class QrScannerScreen extends StatefulWidget {
   const QrScannerScreen({super.key});
@@ -60,7 +60,7 @@ class _QrScannerScreenState extends State<QrScannerScreen>
       final eventId = scannedValue.split(targetBaseUrl).last;
 
       if (eventId.isEmpty) {
-        _showError("Geçersiz QR kodu.");
+        _showError("scan_invalid".tr());
         return;
       }
 
@@ -93,17 +93,19 @@ class _QrScannerScreenState extends State<QrScannerScreen>
             final DateTime now = DateTime.now();
             final DateTime start = startTs.toDate();
             final DateTime end = endTs.toDate();
-            final DateFormat formatter = DateFormat('dd MMM HH:mm');
+            // Dil desteğiyle format
+            final DateFormat formatter =
+                DateFormat('dd MMM HH:mm', context.locale.toString());
 
             if (now.isBefore(start)) {
-              _showError(
-                  "Etkinlik henüz başlamadı.\nBaşlangıç: ${formatter.format(start)}");
+              _showError("answer_event_not_started"
+                  .tr(namedArgs: {'date': formatter.format(start)}));
               return; // Fonksiyondan çık, yönlendirme yapma
             }
 
             if (now.isAfter(end)) {
-              _showError(
-                  "Etkinlik sona erdi.\nBitiş: ${formatter.format(end)}");
+              _showError("answer_event_ended"
+                  .tr(namedArgs: {'date': formatter.format(end)}));
               return; // Fonksiyondan çık, yönlendirme yapma
             }
           }
@@ -144,22 +146,20 @@ class _QrScannerScreenState extends State<QrScannerScreen>
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text("Uyarı"),
+        title: Text("alert_warning".tr()),
         content: Text(message),
         actions: [
           TextButton(
             onPressed: () {
               Navigator.pop(ctx);
               // Kullanıcıyı tekrar tarama yapabilmesi için resetle
-              // veya ana ekrana dönmesini isteyebilirsin.
-              // Burada tekrar taramaya izin veriyoruz:
               if (mounted) {
                 setState(() {
                   isScanCompleted = false;
                 });
               }
             },
-            child: const Text("Tamam"),
+            child: Text("alert_ok".tr()),
           )
         ],
       ),
@@ -290,7 +290,7 @@ class _QrScannerScreenState extends State<QrScannerScreen>
             child: Column(
               children: [
                 Text(
-                  "Align QR code within the frame",
+                  "scan_align".tr(),
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.8),
                     fontSize: 14,

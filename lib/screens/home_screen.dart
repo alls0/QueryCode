@@ -19,8 +19,12 @@ class HomeScreen extends StatelessWidget {
 
     final TextEditingController feedbackController = TextEditingController();
     int selectedRating = 0;
-    String selectedType = 'Öneri';
-    List<String> feedbackTypes = ['Öneri', 'Hata', 'Diğer'];
+    String selectedType = 'feedback_suggestion'.tr();
+    List<String> feedbackTypes = [
+      'feedback_suggestion'.tr(),
+      'feedback_bug'.tr(),
+      'feedback_other'.tr()
+    ];
 
     String? inputErrorText;
     bool isLoading = false;
@@ -51,7 +55,7 @@ class HomeScreen extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          "Geri Bildirim",
+                          "feedback_title".tr(),
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
@@ -65,7 +69,7 @@ class HomeScreen extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 20),
-                    Text("Konu Nedir?",
+                    Text("feedback_subject".tr(),
                         style: TextStyle(
                             fontWeight: FontWeight.w600, color: primaryDark)),
                     const SizedBox(height: 12),
@@ -109,7 +113,7 @@ class HomeScreen extends StatelessWidget {
                         }
                       },
                       decoration: InputDecoration(
-                        hintText: "Düşüncelerinizi buraya yazın...",
+                        hintText: "feedback_placeholder".tr(),
                         hintStyle: TextStyle(color: Colors.grey.shade400),
                         filled: true,
                         fillColor: bgLight,
@@ -134,8 +138,8 @@ class HomeScreen extends StatelessWidget {
                     Center(
                         child: Text(
                             selectedRating > 0
-                                ? "$selectedRating Yıldız"
-                                : "Puan Verin",
+                                ? "$selectedRating ${"feedback_stars".tr()}"
+                                : "feedback_rate".tr(),
                             style: TextStyle(
                                 color: Colors.grey.shade600, fontSize: 12))),
                     Row(
@@ -177,7 +181,7 @@ class HomeScreen extends StatelessWidget {
                                     selectedRating == 0) {
                                   setModalState(() {
                                     inputErrorText =
-                                        "Lütfen bir mesaj yazın veya puan verin.";
+                                        "feedback_error_message".tr();
                                   });
                                   return;
                                 }
@@ -206,8 +210,8 @@ class HomeScreen extends StatelessWidget {
                                     Navigator.pop(context);
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
-                                        content: const Text(
-                                            "Teşekkürler! Geri bildiriminiz alındı."),
+                                        content:
+                                            Text("feedback_thank_you".tr()),
                                         backgroundColor: primaryBlue,
                                         behavior: SnackBarBehavior.floating,
                                       ),
@@ -225,9 +229,9 @@ class HomeScreen extends StatelessWidget {
                                 child: CircularProgressIndicator(
                                     color: Colors.white, strokeWidth: 2),
                               )
-                            : const Text(
-                                "Gönder",
-                                style: TextStyle(
+                            : Text(
+                                "feedback_send".tr(),
+                                style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold),
@@ -313,13 +317,12 @@ class HomeScreen extends StatelessWidget {
         showDialog(
           context: context,
           builder: (ctx) => AlertDialog(
-            title: const Text("Giriş Gerekli"),
-            content: const Text(
-                "Geçmiş etkinliklerinizi görebilmek için giriş yapmalısınız."),
+            title: Text("auth_login_required_title".tr()),
+            content: Text("auth_login_required_desc".tr()),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: const Text("İptal"),
+                child: Text("cancel".tr()),
               ),
               ElevatedButton(
                 onPressed: () {
@@ -327,7 +330,7 @@ class HomeScreen extends StatelessWidget {
                   Navigator.push(context,
                       MaterialPageRoute(builder: (ctx) => const AuthScreen()));
                 },
-                child: const Text("Giriş Yap"),
+                child: Text("auth_login".tr()),
               ),
             ],
           ),

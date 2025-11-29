@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // Sadece favoriler için kaldı
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // EKLENDİ
+import 'package:firebase_auth/firebase_auth.dart';
 import 'qr_result_screen.dart';
 import 'package:easy_localization/easy_localization.dart';
 
@@ -278,7 +278,7 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
           Column(
             children: [
               Text(
-                "HISTORY",
+                "myEventsButton".tr().toUpperCase(),
                 style: TextStyle(
                   fontSize: 10,
                   fontWeight: FontWeight.w800,

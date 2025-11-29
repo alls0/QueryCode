@@ -53,13 +53,13 @@ class _QRResultScreenState extends State<QRResultScreen> {
           children: [
             Icon(Icons.warning_amber_rounded, color: Colors.orange.shade700),
             const SizedBox(width: 10),
-            Text("attention".tr(),
+            Text("alert_warning".tr(),
                 style: const TextStyle(fontWeight: FontWeight.bold)),
           ],
         ),
-        content: const Text(
-          "Giriş yapmadan etkinlik oluşturduğunuz için, bu ekrandan çıkarsanız sonuçlara bir daha erişemeyeceksiniz.\n\nÇıkmak istediğinize emin misiniz?",
-          style: TextStyle(fontSize: 15),
+        content: Text(
+          "result_guest_warning".tr(),
+          style: const TextStyle(fontSize: 15),
         ),
         actions: [
           TextButton(
@@ -74,7 +74,7 @@ class _QRResultScreenState extends State<QRResultScreen> {
               foregroundColor: Colors.red,
               elevation: 0,
             ),
-            child: Text("exit".tr(),
+            child: Text("result_exit".tr(),
                 style: const TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
@@ -102,7 +102,10 @@ class _QRResultScreenState extends State<QRResultScreen> {
       for (var option in optionsList) {
         optionCounts[option.toString()] = 0;
       }
-      if (allowOpenEnded) optionCounts["Diğer"] = 0;
+
+      // "Diğer" seçeneği için dil desteği
+      final otherLabel = "feedback_other".tr();
+      if (allowOpenEnded) optionCounts[otherLabel] = 0;
 
       for (var respondentAnswers in results.values) {
         if (respondentAnswers is List) {
@@ -114,7 +117,8 @@ class _QRResultScreenState extends State<QRResultScreen> {
                   optionCounts[selectedOption] =
                       optionCounts[selectedOption]! + 1;
                 } else if (allowOpenEnded) {
-                  optionCounts["Diğer"] = (optionCounts["Diğer"] ?? 0) + 1;
+                  optionCounts[otherLabel] =
+                      (optionCounts[otherLabel] ?? 0) + 1;
                 }
               }
               break;
@@ -184,7 +188,8 @@ class _QRResultScreenState extends State<QRResultScreen> {
     final start = startTs.toDate();
     final end = endTs.toDate();
     final now = DateTime.now();
-    final dateFormat = DateFormat('dd MMM HH:mm');
+    // Dil desteği ile tarih formatı
+    final dateFormat = DateFormat('dd MMM HH:mm', context.locale.toString());
 
     String statusText;
     Color statusColor;
@@ -192,17 +197,18 @@ class _QRResultScreenState extends State<QRResultScreen> {
 
     if (now.isBefore(start)) {
       final diff = start.difference(now);
-      statusText =
-          "Başlamasına ${diff.inHours}sa ${diff.inMinutes % 60}dk kaldı";
+      statusText = "result_time_start_left".tr(
+          namedArgs: {'h': '${diff.inHours}', 'm': '${diff.inMinutes % 60}'});
       statusColor = Colors.orange;
       statusIcon = Icons.access_time_rounded;
     } else if (now.isAfter(end)) {
-      statusText = "Etkinlik Sona Erdi";
+      statusText = "result_time_ended".tr();
       statusColor = Colors.red;
       statusIcon = Icons.event_busy_rounded;
     } else {
       final diff = end.difference(now);
-      statusText = "Bitişe ${diff.inHours}sa ${diff.inMinutes % 60}dk kaldı";
+      statusText = "result_time_end_left".tr(
+          namedArgs: {'h': '${diff.inHours}', 'm': '${diff.inMinutes % 60}'});
       statusColor = Colors.green;
       statusIcon = Icons.timer_rounded;
     }
@@ -236,7 +242,7 @@ class _QRResultScreenState extends State<QRResultScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text("Başlangıç",
+                  Text("create_start".tr(),
                       style: TextStyle(color: _secondaryColor, fontSize: 12)),
                   Text(dateFormat.format(start),
                       style: TextStyle(
@@ -248,7 +254,7 @@ class _QRResultScreenState extends State<QRResultScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text("Bitiş",
+                  Text("create_end".tr(),
                       style: TextStyle(color: _secondaryColor, fontSize: 12)),
                   Text(dateFormat.format(end),
                       style: TextStyle(
@@ -293,7 +299,7 @@ class _QRResultScreenState extends State<QRResultScreen> {
           Expanded(
             child: Column(
               children: [
-                Text("LIVE RESULTS",
+                Text("qr_live_results".tr().toUpperCase(),
                     style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w800,
@@ -335,6 +341,17 @@ class _QRResultScreenState extends State<QRResultScreen> {
       child: Row(
         children: _viewModes.map((mode) {
           final isSelected = _currentViewMode == mode;
+          String label;
+          if (mode == 'LIST')
+            label = "view_mode_list".tr();
+          else if (mode == 'STATS')
+            label = "view_mode_stats".tr();
+          else
+            label = "view_mode_chart".tr();
+
+          // Kısa gösterim için (List/Stats/Chart uzun olabilir, UI'a sığması için kontrol edilebilir)
+          // Burada basitçe ilk kelimeyi alabiliriz veya direkt tr çevirisini basabiliriz.
+
           return Expanded(
             child: GestureDetector(
               onTap: () => setState(() => _currentViewMode = mode),
@@ -344,12 +361,7 @@ class _QRResultScreenState extends State<QRResultScreen> {
                 decoration: BoxDecoration(
                     color: isSelected ? _primaryColor : Colors.transparent,
                     borderRadius: BorderRadius.circular(12)),
-                child: Text(
-                    mode == 'LIST'
-                        ? "List"
-                        : mode == 'STATS'
-                            ? "Stats"
-                            : "Chart",
+                child: Text(label,
                     textAlign: TextAlign.center,
                     style: TextStyle(
                         fontWeight: FontWeight.w600,
@@ -483,7 +495,7 @@ class _QRResultScreenState extends State<QRResultScreen> {
             }),
             Divider(height: 32, color: _borderColor),
             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              Text("total_responses".tr(),
+              Text("total_respondents".tr(),
                   style: TextStyle(color: _secondaryColor, fontSize: 14)),
               Text("$questionTotalVotes",
                   style: TextStyle(
@@ -629,7 +641,7 @@ class _QRResultScreenState extends State<QRResultScreen> {
                 child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text("total_responses".tr(),
+                      Text("total_respondents".tr(),
                           style:
                               TextStyle(color: _secondaryColor, fontSize: 14)),
                       Text("$totalVotes",
@@ -649,7 +661,7 @@ class _QRResultScreenState extends State<QRResultScreen> {
         child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
       Icon(Icons.bar_chart_rounded, size: 65, color: Colors.grey.shade300),
       const SizedBox(height: 16),
-      Text("No Data Yet", style: TextStyle(color: Colors.grey.shade400))
+      Text("result_no_data".tr(), style: TextStyle(color: Colors.grey.shade400))
     ]));
   }
 

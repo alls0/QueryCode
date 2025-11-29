@@ -54,7 +54,6 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
 
   bool _isNicknameRequired = true;
   bool _isLoading = false;
-  final String _loadingText = "Oluşturuluyor...";
 
   final ImagePicker _picker = ImagePicker();
 
@@ -131,7 +130,7 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
             if (newDateTime.isAfter(_startDate)) {
               _endDate = newDateTime;
             } else {
-              _showWarning("Bitiş tarihi başlangıçtan sonra olmalıdır.");
+              _showWarning("create_date_error".tr());
             }
           }
         });
@@ -142,7 +141,8 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
   // --- MEDYA İŞLEMLERİ ---
   Future<void> _pickImage(int index, ImageSource source) async {
     if (_questions[index].attachments.length >= _maxAttachments) {
-      _showWarning("Maksimum $_maxAttachments görsel ekleyebilirsiniz.");
+      _showWarning(
+          "create_max_image".tr(namedArgs: {'limit': '$_maxAttachments'}));
       return;
     }
     try {
@@ -161,7 +161,8 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
 
   Future<void> _pickFile(int index) async {
     if (_questions[index].attachments.length >= _maxAttachments) {
-      _showWarning("Maksimum $_maxAttachments dosya ekleyebilirsiniz.");
+      _showWarning(
+          "create_max_file".tr(namedArgs: {'limit': '$_maxAttachments'}));
       return;
     }
     try {
@@ -196,7 +197,7 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
             children: <Widget>[
               ListTile(
                   leading: Icon(Icons.camera_alt_rounded, color: _primaryDark),
-                  title: Text('Fotoğraf Çek',
+                  title: Text('create_media_take_photo'.tr(),
                       style: TextStyle(color: _primaryDark)),
                   onTap: () {
                     Navigator.pop(context);
@@ -205,7 +206,7 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
               ListTile(
                   leading:
                       Icon(Icons.photo_library_rounded, color: _primaryDark),
-                  title: Text('Galeriden Seç',
+                  title: Text('create_media_gallery'.tr(),
                       style: TextStyle(color: _primaryDark)),
                   onTap: () {
                     Navigator.pop(context);
@@ -213,8 +214,8 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
                   }),
               ListTile(
                   leading: Icon(Icons.attach_file_rounded, color: _primaryDark),
-                  title:
-                      Text('Dosya Ekle', style: TextStyle(color: _primaryDark)),
+                  title: Text('create_media_file'.tr(),
+                      style: TextStyle(color: _primaryDark)),
                   onTap: () {
                     Navigator.pop(context);
                     _pickFile(index);
@@ -235,7 +236,8 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
 
   void _addNewQuestion() {
     if (_questions.length >= _maxQuestions) {
-      _showWarning("En fazla $_maxQuestions soru oluşturabilirsiniz.");
+      _showWarning(
+          "create_max_questions".tr(namedArgs: {'limit': '$_maxQuestions'}));
       return;
     }
     _syncData();
@@ -494,8 +496,8 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
                           const SizedBox(width: 8),
                           Text(
                               question.attachments.length >= _maxAttachments
-                                  ? "Limit Doldu"
-                                  : "Medya Ekle",
+                                  ? "create_media_limit".tr()
+                                  : "create_media_add".tr(),
                               style: TextStyle(
                                   color: _primaryDark,
                                   fontWeight: FontWeight.w600))
@@ -568,8 +570,8 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
                     child: TextButton.icon(
                         onPressed: () {
                           if (question.options.length >= _maxOptions) {
-                            _showWarning(
-                                "En fazla $_maxOptions seçenek ekleyebilirsiniz.");
+                            _showWarning("create_max_options"
+                                .tr(namedArgs: {'limit': '$_maxOptions'}));
                             return;
                           }
                           setState(() {
@@ -580,7 +582,7 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
                         },
                         icon: const Icon(Icons.add_rounded, size: 18),
                         label: Text(
-                            "Seçenek Ekle (${question.options.length}/$_maxOptions)", // SAYAÇ EKLENDİ
+                            "${"create_add_option".tr()} (${question.options.length}/$_maxOptions)", // SAYAÇ EKLENDİ
                             style:
                                 const TextStyle(fontWeight: FontWeight.w600)),
                         style: TextButton.styleFrom(
@@ -594,13 +596,12 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   activeColor: _primaryBlue,
-                  title: Text("Diğer (Açık Uçlu) Seçeneği",
+                  title: Text("create_other_option".tr(),
                       style: TextStyle(
                           color: _primaryDark,
                           fontWeight: FontWeight.w600,
                           fontSize: 14)),
-                  subtitle: Text(
-                      "Katılımcılar seçenekler dışında kendi cevabını yazabilir.",
+                  subtitle: Text("create_other_desc".tr(),
                       style: TextStyle(color: _softGrey, fontSize: 12)),
                   value: question.allowOpenEnded,
                   onChanged: (val) {
@@ -697,7 +698,8 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
                       child: Row(children: [
                         Icon(Icons.add_rounded, color: _primaryDark, size: 20),
                         const SizedBox(width: 8),
-                        Text("Soru (${_questions.length}/$_maxQuestions)",
+                        Text(
+                            "${'create_question_tab_prefix'.tr()}${_questions.length}/$_maxQuestions",
                             style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 color: _primaryDark))
@@ -732,20 +734,20 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
                                     color: Colors.white, strokeWidth: 2)),
                             const SizedBox(width: 10),
                             Flexible(
-                                child: Text(_loadingText,
+                                child: Text("create_creating".tr(),
                                     style: const TextStyle(
                                         color: Colors.white,
                                         fontSize: 14,
                                         fontWeight: FontWeight.w600),
                                     overflow: TextOverflow.ellipsis))
                           ])
-                    : const Row(mainAxisSize: MainAxisSize.min, children: [
-                        Text("Oluştur",
-                            style: TextStyle(
+                    : Row(mainAxisSize: MainAxisSize.min, children: [
+                        Text("create_btn_create".tr(),
+                            style: const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold)),
-                        SizedBox(width: 8),
-                        Icon(Icons.arrow_forward_rounded,
+                        const SizedBox(width: 8),
+                        const Icon(Icons.arrow_forward_rounded,
                             color: Colors.white, size: 18)
                       ])),
           ),
@@ -763,14 +765,15 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
         builder: (BuildContext context) {
           return StatefulBuilder(
             builder: (BuildContext context, StateSetter setSheetState) {
-              final dateFormat = DateFormat('dd MMM yyyy, HH:mm');
+              final dateFormat =
+                  DateFormat('dd MMM yyyy, HH:mm', context.locale.toString());
               return Padding(
                   padding: const EdgeInsets.all(24.0),
                   child: Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text("Ayarlar",
+                        Text("create_settings".tr(),
                             style: TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
@@ -790,7 +793,7 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
                             }),
                         Divider(color: _bgLight, thickness: 2),
                         const SizedBox(height: 10),
-                        Text("Etkinlik Zamanı",
+                        Text("create_event_time".tr(),
                             style: TextStyle(
                                 fontWeight: FontWeight.w600,
                                 color: _primaryDark)),
@@ -799,7 +802,7 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
                           contentPadding: EdgeInsets.zero,
                           leading: Icon(Icons.calendar_today_rounded,
                               color: _primaryBlue),
-                          title: Text("Başlangıç",
+                          title: Text("create_start".tr(),
                               style: TextStyle(color: _softGrey, fontSize: 12)),
                           subtitle: Text(dateFormat.format(_startDate),
                               style: TextStyle(
@@ -815,7 +818,7 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
                           contentPadding: EdgeInsets.zero,
                           leading: Icon(Icons.event_busy_rounded,
                               color: Colors.redAccent),
-                          title: Text("Bitiş",
+                          title: Text("create_end".tr(),
                               style: TextStyle(color: _softGrey, fontSize: 12)),
                           subtitle: Text(dateFormat.format(_endDate),
                               style: TextStyle(

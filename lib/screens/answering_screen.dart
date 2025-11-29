@@ -77,12 +77,15 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
           final DateTime now = DateTime.now();
           final DateTime start = startTs.toDate();
           final DateTime end = endTs.toDate();
-          final DateFormat formatter = DateFormat('dd MMM HH:mm');
+
+          // TARİH FORMATI GÜNCELLEMESİ (Dil desteği eklendi)
+          final DateFormat formatter =
+              DateFormat('dd MMM HH:mm', context.locale.toString());
 
           if (now.isBefore(start)) {
             setState(() {
-              _errorMessage =
-                  "Etkinlik henüz başlamadı.\nBaşlangıç: ${formatter.format(start)}";
+              _errorMessage = "answer_event_not_started"
+                  .tr(namedArgs: {'date': formatter.format(start)});
               _isLoading = false;
             });
             return;
@@ -90,8 +93,8 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
 
           if (now.isAfter(end)) {
             setState(() {
-              _errorMessage =
-                  "Etkinlik sona erdi.\nBitiş: ${formatter.format(end)}";
+              _errorMessage = "answer_event_ended"
+                  .tr(namedArgs: {'date': formatter.format(end)});
               _isLoading = false;
             });
             return;
@@ -101,7 +104,7 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
         final List<dynamic> votedDevices = data['votedDevices'] ?? [];
         if (votedDevices.contains(_deviceId)) {
           setState(() {
-            _errorMessage = "Bu etkinlikte daha önce oy kullandınız.";
+            _errorMessage = "answer_already_voted".tr();
             _isLoading = false;
           });
           return;
@@ -132,7 +135,7 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
 
     if (finalAnswer.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Lütfen bir cevap yazın.")),
+        SnackBar(content: Text("answer_enter_answer".tr())),
       );
       return;
     }
@@ -178,15 +181,17 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
       } catch (e) {
         if (mounted) {
           String errorMsg = "answer_error_submit".tr();
-          if (e.toString().contains("Already voted"))
-            errorMsg = "Daha önce oy kullandınız!";
+
+          if (e.toString().contains("Already voted")) {
+            errorMsg = "answer_already_voted".tr();
+          }
 
           ScaffoldMessenger.of(context)
               .showSnackBar(SnackBar(content: Text(errorMsg)));
 
           if (e.toString().contains("Already voted")) {
             setState(() {
-              _errorMessage = "Daha önce oy kullandınız!";
+              _errorMessage = "answer_already_voted".tr();
               _isLoading = false;
             });
           } else {
@@ -397,7 +402,7 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
                                                       : Colors.grey),
                                               const SizedBox(width: 8),
                                               Text(
-                                                "Diğer (Kendi cevabını yaz)",
+                                                "answer_other_label".tr(),
                                                 style: TextStyle(
                                                     fontSize: 16,
                                                     fontWeight: FontWeight.w600,
@@ -420,7 +425,7 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
                                             maxLength: 20,
                                             decoration: InputDecoration(
                                               hintText:
-                                                  "Cevabınızı buraya yazın...",
+                                                  "answer_other_hint".tr(),
                                               filled: true,
                                               fillColor: Colors.white,
                                               border: OutlineInputBorder(

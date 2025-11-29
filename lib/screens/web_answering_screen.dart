@@ -77,12 +77,15 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
           final DateTime now = DateTime.now();
           final DateTime start = startTs.toDate();
           final DateTime end = endTs.toDate();
-          final DateFormat formatter = DateFormat('dd MMM HH:mm');
+
+          // TARİH FORMATI GÜNCELLEMESİ (Locale eklendi)
+          final DateFormat formatter =
+              DateFormat('dd MMM HH:mm', context.locale.toString());
 
           if (now.isBefore(start)) {
             setState(() {
-              _errorMessage =
-                  "Etkinlik henüz başlamadı.\nBaşlangıç: ${formatter.format(start)}";
+              _errorMessage = "answer_event_not_started"
+                  .tr(namedArgs: {'date': formatter.format(start)});
               _isLoading = false;
             });
             return;
@@ -90,8 +93,8 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
 
           if (now.isAfter(end)) {
             setState(() {
-              _errorMessage =
-                  "Etkinlik sona erdi.\nBitiş: ${formatter.format(end)}";
+              _errorMessage = "answer_event_ended"
+                  .tr(namedArgs: {'date': formatter.format(end)});
               _isLoading = false;
             });
             return;
@@ -101,7 +104,7 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
         final List<dynamic> votedDevices = data['votedDevices'] ?? [];
         if (votedDevices.contains(_deviceId)) {
           setState(() {
-            _errorMessage = "Bu etkinlikte daha önce oy kullandınız.";
+            _errorMessage = "answer_already_voted".tr();
             _isLoading = false;
           });
           return;
@@ -142,7 +145,7 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
 
     if (finalAnswer.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Lütfen bir cevap girin.")),
+        SnackBar(content: Text("answer_enter_answer".tr())),
       );
       return;
     }
@@ -190,7 +193,7 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
         if (mounted) {
           String errorMsg = "answer_error_submit".tr();
           if (e.toString().contains("Already voted"))
-            errorMsg = "Daha önce oy kullandınız!";
+            errorMsg = "answer_already_voted".tr();
 
           ScaffoldMessenger.of(context)
               .showSnackBar(SnackBar(content: Text(errorMsg)));
@@ -405,7 +408,7 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
                                   ? _primaryColor
                                   : Colors.grey),
                           const SizedBox(width: 8),
-                          Text("Other (Type your answer)",
+                          Text("answer_other_label".tr(),
                               style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
@@ -423,7 +426,7 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
                     autofocus: true,
                     maxLength: 20,
                     decoration: InputDecoration(
-                      hintText: "Type your answer here...",
+                      hintText: "answer_other_hint".tr(),
                       border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12)),
                       focusedBorder: OutlineInputBorder(
