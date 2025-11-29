@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'qr_result_screen.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart'; // <-- EKLENDİ
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class MyEventsScreen extends StatefulWidget {
   const MyEventsScreen({super.key});
@@ -15,7 +15,11 @@ class MyEventsScreen extends StatefulWidget {
 
 class _MyEventsScreenState extends State<MyEventsScreen> {
   // --- VERİ DEĞİŞKENLERİ ---
-  List<DocumentSnapshot> _filteredEvents = [];
+  // Tek bir liste yerine 3 ayrı liste tutuyoruz
+  List<DocumentSnapshot> _ongoingEvents = [];
+  List<DocumentSnapshot> _upcomingEvents = [];
+  List<DocumentSnapshot> _endedEvents = [];
+
   List<String> _favoriteEventIds = [];
   bool _isLoading = true;
 
@@ -34,13 +38,12 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
     _loadData();
   }
 
-  // --- YENİ VERİ YÜKLEME MANTIĞI (CLOUD) ---
+  // --- VERİ YÜKLEME VE KATEGORİZE ETME ---
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
 
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      // Güvenlik önlemi: Eğer kullanıcı yoksa boş dön.
       setState(() => _isLoading = false);
       return;
     }
@@ -49,7 +52,6 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
     _favoriteEventIds = prefs.getStringList('favorite_events') ?? [];
 
     try {
-      // SADECE BU KULLANICININ OLUŞTURDUĞU ETKİNLİKLERİ ÇEK
       final querySnapshot = await FirebaseFirestore.instance
           .collection('events')
           .where('creatorId', isEqualTo: user.uid)
@@ -57,16 +59,16 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
 
       if (mounted) {
         setState(() {
-          // Ham veriyi al
           List<DocumentSnapshot> allDocs = querySnapshot.docs;
 
-          // Filtreleri Uygula
+          // 1. Favori Filtresi
           if (_showOnlyFavorites) {
             allDocs = allDocs
                 .where((doc) => _favoriteEventIds.contains(doc.id))
                 .toList();
           }
 
+          // 2. Sıralama
           allDocs.sort((a, b) {
             Timestamp timeA = (a.data() as Map<String, dynamic>)['createdAt'] ??
                 Timestamp(0, 0);
@@ -77,7 +79,32 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
                 : timeA.compareTo(timeB);
           });
 
-          _filteredEvents = allDocs;
+          // 3. Kategorize Etme (Devam Eden, Başlamayan, Biten)
+          final now = DateTime.now();
+          _ongoingEvents = [];
+          _upcomingEvents = [];
+          _endedEvents = [];
+
+          for (var doc in allDocs) {
+            final data = doc.data() as Map<String, dynamic>;
+            final Timestamp startTs = data['startTime'] ?? Timestamp.now();
+            final Timestamp endTs = data['endTime'] ?? Timestamp.now();
+
+            final DateTime startDate = startTs.toDate();
+            final DateTime endDate = endTs.toDate();
+
+            if (endDate.isBefore(now)) {
+              // Bitiş tarihi şu andan önceyse -> BİTEN
+              _endedEvents.add(doc);
+            } else if (startDate.isAfter(now)) {
+              // Başlangıç tarihi şu andan sonraysa -> BAŞLAMAYAN
+              _upcomingEvents.add(doc);
+            } else {
+              // Şu an başlangıç ve bitiş arasındaysa -> DEVAM EDEN
+              _ongoingEvents.add(doc);
+            }
+          }
+
           _isLoading = false;
         });
       }
@@ -117,21 +144,20 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
         return AlertDialog(
           backgroundColor: Colors.white,
           surfaceTintColor: Colors.transparent,
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20.r)), // .r
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
           title: Text("are_you_sure".tr(),
               style: TextStyle(
                   color: _primaryColor,
                   fontWeight: FontWeight.bold,
-                  fontSize: 18.sp)), // .sp
+                  fontSize: 18.sp)),
           content: Text("delete_confirm_text".tr(),
-              style: TextStyle(color: _secondaryColor, fontSize: 14.sp)), // .sp
+              style: TextStyle(color: _secondaryColor, fontSize: 14.sp)),
           actions: <Widget>[
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
               child: Text("cancel".tr(),
-                  style: TextStyle(
-                      color: _secondaryColor, fontSize: 14.sp)), // .sp
+                  style: TextStyle(color: _secondaryColor, fontSize: 14.sp)),
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(true),
@@ -139,7 +165,7 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
                   style: TextStyle(
                       color: Colors.red,
                       fontWeight: FontWeight.bold,
-                      fontSize: 14.sp)), // .sp
+                      fontSize: 14.sp)),
             ),
           ],
         );
@@ -162,7 +188,7 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
       }
     });
     await prefs.setStringList('favorite_events', _favoriteEventIds);
-    _loadData();
+    _loadData(); // Listeleri tekrar güncellemek için
   }
 
   // --- FİLTRE DİYALOĞU ---
@@ -171,25 +197,23 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
       context: context,
       backgroundColor: Colors.white,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)), // .r
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
       ),
       builder: (context) {
         return StatefulBuilder(builder: (context, setModalState) {
           return Padding(
-            padding: EdgeInsets.all(24.0.r), // .r
+            padding: EdgeInsets.all(24.0.r),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text("filter_sort_title".tr(),
                     style: TextStyle(
-                        fontSize: 20.sp, // .sp
+                        fontSize: 20.sp,
                         fontWeight: FontWeight.bold,
                         color: _primaryColor)),
-                SizedBox(height: 10.h), // .h
+                SizedBox(height: 10.h),
                 Divider(color: _borderColor),
-
-                // FAVORİ FİLTRESİ
                 SwitchListTile(
                   activeColor: _primaryColor,
                   contentPadding: EdgeInsets.zero,
@@ -197,9 +221,9 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
                       style: TextStyle(
                           fontWeight: FontWeight.w600,
                           color: _primaryColor,
-                          fontSize: 16.sp)), // .sp
+                          fontSize: 16.sp)),
                   secondary: Icon(Icons.star_rounded,
-                      color: Colors.amber, size: 28.sp), // .sp
+                      color: Colors.amber, size: 28.sp),
                   value: _showOnlyFavorites,
                   onChanged: (val) {
                     setModalState(() => _showOnlyFavorites = val);
@@ -207,31 +231,29 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
                     _loadData();
                   },
                 ),
-                SizedBox(height: 8.h), // .h
-
-                // SIRALAMA FİLTRESİ
+                SizedBox(height: 8.h),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   title: Text("sort_label".tr(),
                       style: TextStyle(
                           fontWeight: FontWeight.w600,
                           color: _primaryColor,
-                          fontSize: 16.sp)), // .sp
+                          fontSize: 16.sp)),
                   leading: Icon(
                       _sortNewestFirst
                           ? Icons.arrow_downward_rounded
                           : Icons.arrow_upward_rounded,
                       color: _primaryColor,
-                      size: 24.sp), // .sp
+                      size: 24.sp),
                   trailing: DropdownButton<bool>(
                     value: _sortNewestFirst,
                     underline: Container(),
                     icon: Icon(Icons.keyboard_arrow_down_rounded,
-                        color: _primaryColor, size: 24.sp), // .sp
+                        color: _primaryColor, size: 24.sp),
                     style: TextStyle(
                         color: _primaryColor,
                         fontWeight: FontWeight.bold,
-                        fontSize: 14.sp), // .sp
+                        fontSize: 14.sp),
                     items: [
                       DropdownMenuItem(
                           value: true, child: Text("sort_newest".tr())),
@@ -247,7 +269,7 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
                     },
                   ),
                 ),
-                SizedBox(height: 20.h), // .h
+                SizedBox(height: 20.h),
               ],
             ),
           );
@@ -258,28 +280,27 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
 
   Widget _buildHeader() {
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 20.h), // .w .h
+      padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 20.h),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           GestureDetector(
             onTap: () => Navigator.pop(context),
             child: Container(
-              padding: EdgeInsets.all(12.r), // .r
+              padding: EdgeInsets.all(12.r),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(14.r), // .r
+                borderRadius: BorderRadius.circular(14.r),
                 border: Border.all(color: _borderColor),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
-                    blurRadius: 10.r, // .r
-                    offset: Offset(0, 4.h), // .h
-                  ),
+                      color: Colors.black.withOpacity(0.04),
+                      blurRadius: 10.r,
+                      offset: Offset(0, 4.h)),
                 ],
               ),
               child: Icon(Icons.arrow_back_ios_new_rounded,
-                  size: 20.sp, color: _primaryColor), // .sp
+                  size: 20.sp, color: _primaryColor),
             ),
           ),
           Column(
@@ -287,41 +308,38 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
               Text(
                 "myEventsButton".tr().toUpperCase(),
                 style: TextStyle(
-                  fontSize: 10.sp, // .sp
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 1.5,
-                  color: _secondaryColor,
-                ),
+                    fontSize: 10.sp,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.5,
+                    color: _secondaryColor),
               ),
-              SizedBox(height: 4.h), // .h
+              SizedBox(height: 4.h),
               Text(
                 "events_title".tr(),
                 style: TextStyle(
-                  fontSize: 18.sp, // .sp
-                  fontWeight: FontWeight.bold,
-                  color: _primaryColor,
-                ),
+                    fontSize: 18.sp,
+                    fontWeight: FontWeight.bold,
+                    color: _primaryColor),
               ),
             ],
           ),
           GestureDetector(
             onTap: _showFilterDialog,
             child: Container(
-              padding: EdgeInsets.all(12.r), // .r
+              padding: EdgeInsets.all(12.r),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(14.r), // .r
+                borderRadius: BorderRadius.circular(14.r),
                 border: Border.all(color: _borderColor),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
-                    blurRadius: 10.r, // .r
-                    offset: Offset(0, 4.h), // .h
-                  ),
+                      color: Colors.black.withOpacity(0.04),
+                      blurRadius: 10.r,
+                      offset: Offset(0, 4.h)),
                 ],
               ),
               child: Icon(Icons.filter_list_rounded,
-                  size: 20.sp, color: _primaryColor), // .sp
+                  size: 20.sp, color: _primaryColor),
             ),
           ),
         ],
@@ -339,23 +357,22 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
         eventData['eventTitle'] ?? "${"events_prefix".tr()}${index + 1}";
 
     return Container(
-      margin: EdgeInsets.only(bottom: 12.h), // .h
+      margin: EdgeInsets.only(bottom: 12.h),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16.r), // .r
+        borderRadius: BorderRadius.circular(16.r),
         border: Border.all(color: _borderColor),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 4.r, // .r
-            offset: Offset(0, 2.h), // .h
-          )
+              color: Colors.black.withOpacity(0.02),
+              blurRadius: 4.r,
+              offset: Offset(0, 2.h))
         ],
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(16.r), // .r
+          borderRadius: BorderRadius.circular(16.r),
           onTap: () {
             Navigator.push(
               context,
@@ -364,20 +381,19 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
             );
           },
           child: Padding(
-            padding:
-                EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h), // .w .h
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
             child: Row(
               children: [
                 Container(
-                  padding: EdgeInsets.all(12.r), // .r
+                  padding: EdgeInsets.all(12.r),
                   decoration: BoxDecoration(
                     color: const Color(0xFFEDF2F7),
-                    borderRadius: BorderRadius.circular(12.r), // .r
+                    borderRadius: BorderRadius.circular(12.r),
                   ),
                   child: Icon(Icons.qr_code_2_rounded,
-                      color: _primaryColor, size: 24.sp), // .sp
+                      color: _primaryColor, size: 24.sp),
                 ),
-                SizedBox(width: 16.w), // .w
+                SizedBox(width: 16.w),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -385,21 +401,19 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
                       Text(
                         title,
                         style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16.sp, // .sp
-                          color: _primaryColor,
-                        ),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16.sp,
+                            color: _primaryColor),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      SizedBox(height: 4.h), // .h
+                      SizedBox(height: 4.h),
                       Text(
                         "${date.day}/${date.month}/${date.year} • ${date.hour}:${date.minute.toString().padLeft(2, '0')}",
                         style: TextStyle(
-                          color: _secondaryColor,
-                          fontSize: 12.sp, // .sp
-                          fontWeight: FontWeight.w500,
-                        ),
+                            color: _secondaryColor,
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.w500),
                       ),
                     ],
                   ),
@@ -415,16 +429,13 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
                         color: isFavorite
                             ? Colors.amber
                             : _secondaryColor.withOpacity(0.5),
-                        size: 24.sp, // .sp
+                        size: 24.sp,
                       ),
                       onPressed: () => _toggleFavorite(eventId),
                     ),
                     IconButton(
-                      icon: Icon(
-                        Icons.delete_outline_rounded,
-                        color: Colors.red.shade300,
-                        size: 22.sp, // .sp
-                      ),
+                      icon: Icon(Icons.delete_outline_rounded,
+                          color: Colors.red.shade300, size: 22.sp),
                       onPressed: () => _confirmAndDelete(eventId),
                     ),
                   ],
@@ -437,59 +448,95 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
     );
   }
 
+  // Liste boş ise gösterilecek widget
+  Widget _buildEmptyState(String message) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.event_busy_rounded, size: 64.sp, color: _borderColor),
+          SizedBox(height: 16.h),
+          Text(message,
+              style: TextStyle(
+                  color: _secondaryColor,
+                  fontSize: 14.sp,
+                  fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+
+  // Her sekme için liste oluşturucu
+  Widget _buildEventList(List<DocumentSnapshot> events, String emptyMessage) {
+    if (events.isEmpty) return _buildEmptyState(emptyMessage);
+    return ListView.builder(
+      padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
+      itemCount: events.length,
+      itemBuilder: (context, index) {
+        return _buildEventCard(events[index], index);
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: _backgroundColor,
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            Expanded(
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _filteredEvents.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.event_note_rounded,
-                                  size: 64.sp, color: _borderColor), // .sp
-                              SizedBox(height: 16.h), // .h
-                              Text("events_no_events".tr(),
-                                  style: TextStyle(
-                                      color: _secondaryColor,
-                                      fontSize: 14.sp, // .sp
-                                      fontWeight: FontWeight.w600)),
-                              if (_showOnlyFavorites)
-                                Padding(
-                                  padding: EdgeInsets.only(top: 8.0.h), // .h
-                                  child: Text("no_favorites_hint".tr(),
-                                      style: TextStyle(
-                                          color:
-                                              _secondaryColor.withOpacity(0.6),
-                                          fontSize: 13.sp)), // .sp
-                                ),
-                            ],
-                          ),
-                        )
-                      : Column(
-                          children: [
-                            Expanded(
-                              child: ListView.builder(
-                                padding: EdgeInsets.symmetric(
-                                    horizontal: 20.w), // .w
-                                itemCount: _filteredEvents.length,
-                                itemBuilder: (context, index) {
-                                  return _buildEventCard(
-                                      _filteredEvents[index], index);
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-            ),
-          ],
+    // 3 Sekmeli yapı için DefaultTabController ekliyoruz
+    return DefaultTabController(
+      length: 3,
+      child: Scaffold(
+        backgroundColor: _backgroundColor,
+        body: SafeArea(
+          child: Column(
+            children: [
+              _buildHeader(),
+
+              // --- TAB BAR ---
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20.w),
+                child: Container(
+                  height: 45.h,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12.r),
+                    border: Border.all(color: _borderColor),
+                  ),
+                  child: TabBar(
+                    indicatorSize: TabBarIndicatorSize.tab,
+                    dividerColor: Colors.transparent,
+                    indicator: BoxDecoration(
+                      color: _primaryColor,
+                      borderRadius: BorderRadius.circular(10.r),
+                    ),
+                    labelColor: Colors.white,
+                    unselectedLabelColor: _secondaryColor,
+                    labelStyle:
+                        TextStyle(fontSize: 12.sp, fontWeight: FontWeight.bold),
+                    tabs: [
+                      // Burada "tr()" anahtarlarını uygun çevirilerle değiştirin
+                      Tab(text: "Devam Eden"), // ongoing
+                      Tab(text: "Başlamayan"), // upcoming
+                      Tab(text: "Geçmiş"), // past
+                    ],
+                  ),
+                ),
+              ),
+              SizedBox(height: 10.h),
+
+              Expanded(
+                child: _isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : TabBarView(
+                        children: [
+                          _buildEventList(
+                              _ongoingEvents, "Devam eden etkinlik yok"),
+                          _buildEventList(
+                              _upcomingEvents, "Planlanmış etkinlik yok"),
+                          _buildEventList(_endedEvents, "Geçmiş etkinlik yok"),
+                        ],
+                      ),
+              ),
+            ],
+          ),
         ),
       ),
     );
