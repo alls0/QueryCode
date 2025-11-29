@@ -150,5 +150,20 @@
     "result_time_ended": "Etkinlik Sona Erdi",
     "result_no_data": "Henüz veri yok",
     "result_total_votes": "Toplam Oy",
-    "link_copied": "Bağlantı kopyalandı"
+    "link_copied": "Bağlantı kopyalandı",
+    "auth_no_account_text": "Hesabınız yok mu?",
+    "auth_have_account_text": "Zaten hesabınız var mı?",
+    "auth_welcome_sub": "Devam etmek için giriş yapın",
+    "auth_create_sub": "Hemen ücretsiz hesabınızı oluşturun",
+    "auth_name": "İsim",
+    "auth_surname": "Soyisim",
+    "auth_username": "Kullanıcı Adı",
+    "auth_error_generic": "Kimlik doğrulama sırasında genel bir hata oluştu.",
+    "auth_register_required": "Kullanıcı bulunamadı. Lütfen kayıt olun.",
+    "auth_wrong_password": "E-posta veya şifre hatalı. Lütfen tekrar deneyin.",
+    "auth_email_in_use": "Bu e-posta adresi zaten kullanımda.",
+    "auth_weak_password": "Şifre en az 6 karakter uzunluğunda olmalıdır.",
+    "auth_email_invalid": "Geçerli bir e-posta adresi girin.",
+    "auth_channel_error": "Uygulama sunucu bağlantısında bir sorun oluştu.",
+    "auth_unexpected_error": "Beklenmedik bir hata oluştu. Lütfen internet bağlantınızı kontrol edip tekrar deneyin."
 }

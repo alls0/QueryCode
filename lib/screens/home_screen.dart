@@ -310,29 +310,128 @@ class HomeScreen extends StatelessWidget {
     }
 
     // --- GEÇMİŞ KONTROLÜ ---
+  // --- GEÇMİŞ KONTROLÜ (MODERN TASARIM) ---
     void _handleMyEventsClick(BuildContext context) {
       final user = FirebaseAuth.instance.currentUser;
+      
       if (user == null) {
-        // Kullanıcı giriş yapmamışsa
+        // Kullanıcı giriş yapmamışsa -> MODERN DIALOG GÖSTER
         showDialog(
           context: context,
-          builder: (ctx) => AlertDialog(
-            title: Text("auth_login_required_title".tr()),
-            content: Text("auth_login_required_desc".tr()),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: Text("cancel".tr()),
+          builder: (ctx) => Dialog(
+            backgroundColor: Colors.transparent, // Arkaplanı şeffaf yapıyoruz ki kendi şeklimizi verelim
+            insetPadding: const EdgeInsets.symmetric(horizontal: 24), // Kenar boşlukları
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24), // Yuvarlak köşeler
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  Navigator.push(context,
-                      MaterialPageRoute(builder: (ctx) => const AuthScreen()));
-                },
-                child: Text("auth_login".tr()),
+              child: Column(
+                mainAxisSize: MainAxisSize.min, // İçerik kadar yer kapla
+                children: [
+                  // 1. İKON ALANI
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.lock_person_rounded, // Kilitli kişi ikonu
+                      color: const Color(0xFF1A202C), // Primary Blue
+                      size: 40,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // 2. BAŞLIK
+                  Text(
+                    "auth_login_required_title".tr(), // "Giriş Yapmalısınız"
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1A202C), // Primary Dark
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // 3. AÇIKLAMA
+                  Text(
+                    "auth_login_required_desc".tr(), // "Bu özelliği kullanmak için..."
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey.shade600,
+                      height: 1.5, // Satır arası boşluk okunabilirlik için
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // 4. BUTONLAR (YAN YANA)
+                  Row(
+                    children: [
+                      // Vazgeç Butonu
+                      Expanded(
+                        child: TextButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: Text(
+                            "cancel".tr(),
+                            style: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      
+                      // Giriş Yap Butonu
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.pop(ctx);
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (ctx) => const AuthScreen()),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF1A202C),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: Text(
+                            "auth_login".tr(),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         );
       } else {

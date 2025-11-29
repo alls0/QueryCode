@@ -150,5 +150,21 @@
     "result_time_ended": "Event Ended",
     "result_no_data": "No Data Yet",
     "result_total_votes": "Total Votes",
-    "link_copied": "Link copied"
+    "link_copied": "Link copied",
+    "auth_no_account_text": "Don't you have an account??",
+    "auth_have_account_text": "Do you already have an account?",
+    "auth_welcome_sub": "Log in to continue",
+    "auth_create_sub": "Create your free account now",
+    "auth_name": "First Name",
+    "auth_surname": "Last Name",
+    "auth_username": "Username",
+    "auth_error_generic": "An unexpected error occurred. Please try again.",
+    "auth_error_user_not_found": "No user found with this email.",
+    "auth_error_wrong_password": "Email or password is incorrect. Please check your credentials.",
+    "auth_error_invalid_credential": "Invalid credentials. Please check your email and password.",
+    "auth_error_email_in_use": "This email is already in use. You can try logging in.",
+    "auth_error_weak_password": "Your password is too weak. Please use a stronger password with at least 6 characters.",
+    "auth_error_email_invalid": "Please enter a valid email address.",
+    "auth_error_operation_not_allowed": "Registration is currently disabled by the server.",
+    "auth_error_network": "Check your internet connection and try again."
 }

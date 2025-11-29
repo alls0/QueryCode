@@ -40,44 +40,122 @@ class _QRResultScreenState extends State<QRResultScreen> {
   }
 
   // --- ÇIKIŞ KONTROL MANTIĞI ---
+ // --- ÇIKIŞ KONTROL MANTIĞI (MODERN DIALOG) ---
+ // --- ÇIKIŞ KONTROL MANTIĞI (YENİLENMİŞ TASARIM) ---
   Future<bool> _onWillPop() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) return true;
 
     final shouldLeave = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            Icon(Icons.warning_amber_rounded, color: Colors.orange.shade700),
-            const SizedBox(width: 10),
-            Text("alert_warning".tr(),
-                style: const TextStyle(fontWeight: FontWeight.bold)),
-          ],
-        ),
-        content: Text(
-          "result_guest_warning".tr(),
-          style: const TextStyle(fontSize: 15),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child:
-                Text("cancel".tr(), style: TextStyle(color: _secondaryColor)),
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 16,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red.shade50,
-              foregroundColor: Colors.red,
-              elevation: 0,
-            ),
-            child: Text("result_exit".tr(),
-                style: const TextStyle(fontWeight: FontWeight.bold)),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 1. İKON (Kırmızı yerine TURUNCU/AMBER)
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF7ED), // Çok açık turuncu (Amber-50)
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.priority_high_rounded, // Sade ünlem ikonu
+                  color: Color(0xFFF97316), // Canlı Turuncu (Orange-500)
+                  size: 32,
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // 2. BAŞLIK
+              Text(
+                "alert_warning".tr(), 
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: _primaryColor,
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // 3. AÇIKLAMA
+              Text(
+                "result_guest_warning".tr(),
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: _secondaryColor,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // 4. BUTONLAR
+              Row(
+                children: [
+                  // İptal (Gri ve Sade)
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        "cancel".tr(),
+                        style: TextStyle(
+                          color: _secondaryColor,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  
+                  // Çıkış (Kırmızı yerine UYGULAMA RENGİ)
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.of(context).pop(true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _primaryColor, // Diğer butonlarla aynı renk
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        "result_exit".tr(),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
     return shouldLeave ?? false;
@@ -182,83 +260,161 @@ class _QRResultScreenState extends State<QRResultScreen> {
   }
 
   // --- YENİ: ETKİNLİK ZAMAN BİLGİSİ KARTI ---
+  // --- YENİ: MODERN ZAMAN BİLGİSİ KARTI ---
   Widget _buildTimeInfoCard(Timestamp? startTs, Timestamp? endTs) {
     if (startTs == null || endTs == null) return const SizedBox.shrink();
 
     final start = startTs.toDate();
     final end = endTs.toDate();
     final now = DateTime.now();
-    // Dil desteği ile tarih formatı
     final dateFormat = DateFormat('dd MMM HH:mm', context.locale.toString());
 
+    // Durum Tasarım Değişkenleri
     String statusText;
     Color statusColor;
+    Color statusBgColor;
     IconData statusIcon;
 
     if (now.isBefore(start)) {
+      // BAŞLAMADI -> Turuncu (Bekleme hissi için ideal, kalabilir)
       final diff = start.difference(now);
       statusText = "result_time_start_left".tr(
           namedArgs: {'h': '${diff.inHours}', 'm': '${diff.inMinutes % 60}'});
-      statusColor = Colors.orange;
-      statusIcon = Icons.access_time_rounded;
+      statusColor = const Color(0xFFD97706); // Amber-700
+      statusBgColor = const Color(0xFFFFFBEB); // Amber-50
+      statusIcon = Icons.hourglass_empty_rounded;
     } else if (now.isAfter(end)) {
+      // BİTTİ -> Gri (Pasif/Geçmiş hissi için en doğrusu)
       statusText = "result_time_ended".tr();
-      statusColor = Colors.red;
-      statusIcon = Icons.event_busy_rounded;
+      statusColor = const Color(0xFF718096); // Cool Gray
+      statusBgColor = const Color(0xFFF7FAFC); 
+      statusIcon = Icons.flag_rounded;
     } else {
+      // AKTİF -> ARTIK MAVİ (Uygulamanın Ana Rengi)
+      // Yeşil yerine uygulamanızın imza mavisini kullanıyoruz
       final diff = end.difference(now);
       statusText = "result_time_end_left".tr(
           namedArgs: {'h': '${diff.inHours}', 'm': '${diff.inMinutes % 60}'});
-      statusColor = Colors.green;
+      
+      // AuthScreen'deki _primaryBlue ile aynı ton (0xFF3182CE)
+      statusColor = const Color(0xFF3182CE); 
+      // Çok uçuk mavi arka plan
+      statusBgColor = const Color(0xFFEBF8FF); 
       statusIcon = Icons.timer_rounded;
     }
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: statusColor.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: statusColor.withOpacity(0.3)),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _borderColor),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.02),
+              blurRadius: 10,
+              offset: const Offset(0, 4))
+        ],
       ),
       child: Column(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(statusIcon, color: statusColor, size: 20),
-              const SizedBox(width: 8),
-              Text(statusText,
+          // 1. ÜST KISIM: DURUM ROZETİ (Artık Mavi)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: statusBgColor,
+              borderRadius: BorderRadius.circular(30),
+              border: Border.all(color: statusColor.withOpacity(0.2)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(statusIcon, color: statusColor, size: 16),
+                const SizedBox(width: 8),
+                Text(
+                  statusText,
                   style: TextStyle(
                       color: statusColor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16)),
-            ],
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 20),
+
+          // 2. ALT KISIM: ZAMAN ÇİZELGESİ (Aynı kalıyor)
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+              // Başlangıç
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text("create_start".tr(),
-                      style: TextStyle(color: _secondaryColor, fontSize: 12)),
+                  Row(
+                    children: [
+                      Icon(Icons.play_circle_outline_rounded, 
+                          size: 14, color: _secondaryColor),
+                      const SizedBox(width: 4),
+                      Text("create_start".tr().toUpperCase(),
+                          style: TextStyle(
+                              color: _secondaryColor, 
+                              fontSize: 10, 
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5)),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
                   Text(dateFormat.format(start),
                       style: TextStyle(
-                          color: _primaryColor, fontWeight: FontWeight.w600)),
+                          color: _primaryColor, 
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15)),
                 ],
               ),
-              Icon(Icons.arrow_forward_rounded,
-                  color: _secondaryColor.withOpacity(0.5), size: 16),
+              
+              // Ortadaki Ok
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Row(
+                    children: [
+                      Expanded(child: Divider(color: _borderColor, thickness: 1)),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: Icon(Icons.arrow_forward_rounded, 
+                            color: _secondaryColor.withOpacity(0.4), size: 16),
+                      ),
+                      Expanded(child: Divider(color: _borderColor, thickness: 1)),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Bitiş
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text("create_end".tr(),
-                      style: TextStyle(color: _secondaryColor, fontSize: 12)),
+                  Row(
+                    children: [
+                      Text("create_end".tr().toUpperCase(),
+                          style: TextStyle(
+                              color: _secondaryColor, 
+                              fontSize: 10, 
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5)),
+                      const SizedBox(width: 4),
+                      Icon(Icons.stop_circle_outlined, 
+                          size: 14, color: _secondaryColor),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
                   Text(dateFormat.format(end),
                       style: TextStyle(
-                          color: _primaryColor, fontWeight: FontWeight.w600)),
+                          color: _primaryColor, 
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15)),
                 ],
               ),
             ],

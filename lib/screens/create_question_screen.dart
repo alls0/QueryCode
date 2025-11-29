@@ -38,7 +38,7 @@ class CreateQuestionScreen extends StatefulWidget {
 class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
   // --- LİMİTLER ---
   static const int _maxQuestions = 10;
-  static const int _maxOptions = 5;
+  static const int _maxOptions = 10;
   static const int _maxAttachments = 3;
 
   late List<QuestionModel> _questions;
@@ -464,8 +464,8 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
                                             blurRadius: 2,
                                             color: Colors.black12)
                                       ]),
-                                  child: const Icon(Icons.close,
-                                      size: 14, color: Colors.red),
+                                  child: const Icon(Icons.delete_outline_rounded,
+                                      size: 20, color: Colors.red),
                                 ),
                               ),
                             )
@@ -548,8 +548,8 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
                         // SEÇENEK SİLME BUTONU
                         if (question.optionControllers.length > 2)
                           IconButton(
-                            icon: const Icon(Icons.close_rounded,
-                                color: Colors.grey, size: 20),
+                            icon: const Icon(Icons.delete_outline_rounded,
+                                color: Colors.redAccent, size: 22),
                             onPressed: () {
                               setState(() {
                                 question.options.removeAt(optIndex);
@@ -593,23 +593,35 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
                 // Açık Uçlu Seçenek
                 const SizedBox(height: 16),
                 Divider(color: Colors.grey.shade100, height: 24),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  activeColor: _primaryBlue,
-                  title: Text("create_other_option".tr(),
-                      style: TextStyle(
-                          color: _primaryDark,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14)),
-                  subtitle: Text("create_other_desc".tr(),
-                      style: TextStyle(color: _softGrey, fontSize: 12)),
-                  value: question.allowOpenEnded,
-                  onChanged: (val) {
-                    setState(() {
-                      question.allowOpenEnded = val;
-                    });
-                  },
-                ),
+                // ...
+SwitchListTile(
+  contentPadding: EdgeInsets.zero,
+  
+  // --- AKTİF (AÇIK) RENKLER ---
+  activeColor: _primaryDark, // Top rengi (Koyu Lacivert)
+  activeTrackColor: _primaryDark.withOpacity(0.3), // Arkadaki iz (Soluk Lacivert)
+
+  // --- PASİF (KAPALI) RENKLER ---
+  inactiveThumbColor: _softGrey, // Top rengi (Sizin tanımladığınız gri)
+  inactiveTrackColor: Colors.grey.shade200, // Arkadaki iz (Çok açık gri)
+  
+  // İsteğe bağlı: Kenar çizgisini kaldırmak daha "flat" bir görüntü verir
+  trackOutlineColor: MaterialStateProperty.all(Colors.transparent),
+
+  title: Text("create_other_option".tr(),
+      style: TextStyle(
+          color: _primaryDark,
+          fontWeight: FontWeight.w600,
+          fontSize: 14)),
+  subtitle: Text("create_other_desc".tr(),
+      style: TextStyle(color: _softGrey, fontSize: 12)),
+  value: question.allowOpenEnded,
+  onChanged: (val) {
+    setState(() {
+      question.allowOpenEnded = val;
+    });
+  },
+),
               ],
             ),
           ),
@@ -758,83 +770,194 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
 
   void _showSettingsSheet() {
     showModalBottomSheet(
-        context: context,
-        backgroundColor: _surfaceWhite,
-        shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-        builder: (BuildContext context) {
-          return StatefulBuilder(
-            builder: (BuildContext context, StateSetter setSheetState) {
-              final dateFormat =
-                  DateFormat('dd MMM yyyy, HH:mm', context.locale.toString());
-              return Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text("create_settings".tr(),
-                            style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: _primaryDark)),
-                        const SizedBox(height: 20),
-                        SwitchListTile(
-                            contentPadding: EdgeInsets.zero,
-                            title: Text("create_nickname_required".tr(),
+      context: context,
+      backgroundColor: _surfaceWhite,
+      isScrollControlled: true, // İçeriğe göre esnemesini sağlar
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setSheetState) {
+            final dateFormat =
+                DateFormat('dd MMM yyyy, HH:mm', context.locale.toString());
+
+            // --- YARDIMCI: Modern Tarih Kartı Tasarımı ---
+            Widget buildDateCard(String label, DateTime date, bool isStart) {
+              return InkWell(
+                onTap: () async {
+                  await _pickDateTime(isStart);
+                  setSheetState(() {});
+                },
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  decoration: BoxDecoration(
+                    color: _bgLight,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.grey.shade200),
+                  ),
+                  child: Row(
+                    children: [
+                      // Modern İkon Kutusu
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.grey.shade100),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.03),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            )
+                          ],
+                        ),
+                        child: Icon(
+                          isStart
+                              ? Icons.calendar_today_rounded
+                              : Icons.event_available_rounded,
+                          color: _primaryDark, // Artık renkli değil, tutarlı
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      // Tarih Metinleri
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(label,
                                 style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    color: _primaryDark)),
-                            value: _isNicknameRequired,
-                            activeColor: _primaryBlue,
-                            onChanged: (val) {
-                              setSheetState(() => _isNicknameRequired = val);
-                              this.setState(() => _isNicknameRequired = val);
-                            }),
-                        Divider(color: _bgLight, thickness: 2),
-                        const SizedBox(height: 10),
-                        Text("create_event_time".tr(),
-                            style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                color: _primaryDark)),
-                        const SizedBox(height: 12),
-                        ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: Icon(Icons.calendar_today_rounded,
-                              color: _primaryBlue),
-                          title: Text("create_start".tr(),
-                              style: TextStyle(color: _softGrey, fontSize: 12)),
-                          subtitle: Text(dateFormat.format(_startDate),
+                                    color: _softGrey,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600)),
+                            const SizedBox(height: 4),
+                            Text(
+                              dateFormat.format(date),
                               style: TextStyle(
-                                  color: _primaryDark,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16)),
-                          onTap: () async {
-                            await _pickDateTime(true);
-                            setSheetState(() {});
-                          },
+                                color: _primaryDark,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                                letterSpacing: -0.3,
+                              ),
+                            ),
+                          ],
                         ),
-                        ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: Icon(Icons.event_busy_rounded,
-                              color: Colors.redAccent),
-                          title: Text("create_end".tr(),
-                              style: TextStyle(color: _softGrey, fontSize: 12)),
-                          subtitle: Text(dateFormat.format(_endDate),
-                              style: TextStyle(
-                                  color: _primaryDark,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16)),
-                          onTap: () async {
-                            await _pickDateTime(false);
-                            setSheetState(() {});
-                          },
+                      ),
+                      // Yönlendirme Oku
+                      Icon(Icons.arrow_forward_ios_rounded,
+                          size: 14, color: _softGrey.withOpacity(0.5)),
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+                top: 12, // Handle için üst boşluk
+                left: 24,
+                right: 24,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // --- 1. MODERN DRAG HANDLE (TUTMA ÇUBUĞU) ---
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Başlık
+                  Row(
+                    children: [
+                      Icon(Icons.tune_rounded, color: _primaryDark, size: 24),
+                      const SizedBox(width: 12),
+                      Text("create_settings".tr(),
+                          style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: _primaryDark)),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+
+                  // --- 2. SWITCH (DİĞERİYLE AYNI STİL) ---
+                  Container(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.grey.shade100),
+                    ),
+                    child: SwitchListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                      
+                      // --- RENK UYUMU BURADA SAĞLANDI ---
+                      activeColor: _primaryDark,
+                      activeTrackColor: _primaryDark.withOpacity(0.3),
+                      inactiveThumbColor: _softGrey,
+                      inactiveTrackColor: Colors.grey.shade200,
+                      trackOutlineColor:
+                          MaterialStateProperty.all(Colors.transparent),
+                      // ----------------------------------
+
+                      title: Text("create_nickname_required".tr(),
+                          style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: _primaryDark,
+                              fontSize: 15)),
+                      // İsteğe bağlı açıklama ekleyebilirsiniz, boş durmasın diye ekledim
+                      subtitle: Padding(
+                        padding: const EdgeInsets.only(top: 2.0),
+                        child: Text(
+                          "Katılımcılar isim girmek zorunda", // İsterseniz .tr() ekleyin
+                          style: TextStyle(color: _softGrey, fontSize: 12),
                         ),
-                        const SizedBox(height: 20),
-                      ]));
-            },
-          );
-        });
+                      ),
+                      value: _isNicknameRequired,
+                      onChanged: (val) {
+                        setSheetState(() => _isNicknameRequired = val);
+                        this.setState(() => _isNicknameRequired = val);
+                      },
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 24),
+
+                  // --- 3. MODERN TARİH ALANI ---
+                  Text("create_event_time".tr(),
+                      style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: _primaryDark,
+                          fontSize: 14)),
+                  const SizedBox(height: 12),
+                  
+                  // Başlangıç Kartı
+                  buildDateCard("create_start".tr(), _startDate, true),
+                  const SizedBox(height: 12),
+                  // Bitiş Kartı
+                  buildDateCard("create_end".tr(), _endDate, false),
+
+                  const SizedBox(height: 16),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   @override

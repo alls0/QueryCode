@@ -34,9 +34,11 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
   int _currentMediaIndex = 0;
   String? _deviceId;
 
+  // --- MODERN RENK PALETİ ---
   final Color _primaryColor = const Color(0xFF1A202C);
   final Color _bgColor = const Color(0xFFF8FAFC);
   final Color _surfaceColor = Colors.white;
+  final Color _secondaryColor = const Color(0xFF718096);
 
   @override
   void initState() {
@@ -77,8 +79,6 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
           final DateTime now = DateTime.now();
           final DateTime start = startTs.toDate();
           final DateTime end = endTs.toDate();
-
-          // TARİH FORMATI GÜNCELLEMESİ (Locale eklendi)
           final DateFormat formatter =
               DateFormat('dd MMM HH:mm', context.locale.toString());
 
@@ -145,7 +145,11 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
 
     if (finalAnswer.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("answer_enter_answer".tr())),
+        SnackBar(
+          content: Text("answer_enter_answer".tr()),
+          backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
+        ),
       );
       return;
     }
@@ -195,8 +199,8 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
           if (e.toString().contains("Already voted"))
             errorMsg = "answer_already_voted".tr();
 
-          ScaffoldMessenger.of(context)
-              .showSnackBar(SnackBar(content: Text(errorMsg)));
+          ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(errorMsg), backgroundColor: Colors.red));
           setState(() {
             _isLoading = false;
             if (e.toString().contains("Already voted"))
@@ -216,82 +220,179 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Progress değerini hesapla (0.0 ile 1.0 arası)
+    // Eğer Nickname adımındaysak progress 0, değilse soruya göre
+    double progress = 0.0;
+    if (_currentStep == 1 && _questions.isNotEmpty) {
+      progress = (_currentQuestionIndex + 1) / _questions.length;
+    }
+
     return Scaffold(
       backgroundColor: _bgColor,
+      // --- APP BAR & LOGO & PROGRESS ---
+      appBar: AppBar(
+        backgroundColor: _bgColor,
+        elevation: 0,
+        centerTitle: true,
+        automaticallyImplyLeading: false,
+        title: Hero(
+          tag: 'app_logo',
+          child: Image.asset(
+            'assets/images/logo4.png',
+            height: 40,
+            errorBuilder: (c, o, s) =>
+                Icon(Icons.qr_code_2, color: _primaryColor),
+          ),
+        ),
+        bottom: _currentStep == 1
+            ? PreferredSize(
+                preferredSize: const Size.fromHeight(6.0),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 0), // Full width
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    backgroundColor: Colors.grey.shade200,
+                    color: _primaryColor,
+                    minHeight: 4,
+                  ),
+                ),
+              )
+            : null,
+      ),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
           child: _isLoading
               ? CircularProgressIndicator(color: _primaryColor)
               : _errorMessage.isNotEmpty
-                  ? Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.error_outline,
-                            size: 60, color: Colors.redAccent),
-                        const SizedBox(height: 16),
-                        Text(
-                          _errorMessage,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                              color: Colors.black87,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w500),
-                        ),
-                      ],
-                    )
-                  : _buildCurrentStep(),
+                  ? _buildErrorView()
+                  : _buildCurrentStep(), // Animasyonlu geçiş eklenebilir
         ),
       ),
     );
   }
 
-  Widget _buildCurrentStep() {
-    if (_currentStep == 0) {
-      return _buildNicknameStep();
-    } else {
-      return _buildAnsweringStep();
-    }
+  Widget _buildErrorView() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+              color: Colors.orange.shade50, shape: BoxShape.circle),
+          child: Icon(Icons.info_outline_rounded,
+              size: 50, color: Colors.orange.shade700),
+        ),
+        const SizedBox(height: 24),
+        Text(
+          _errorMessage,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+              color: Colors.black87, fontSize: 18, fontWeight: FontWeight.w600),
+        ),
+      ],
+    );
   }
 
+  Widget _buildCurrentStep() {
+    // AnimatedSwitcher ile adımlar arası yumuşak geçiş
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 500),
+      transitionBuilder: (child, animation) => FadeTransition(opacity: animation, child: child),
+      child: _currentStep == 0
+          ? _buildNicknameStep()
+          : _buildAnsweringStep(),
+    );
+  }
+
+  // --- 1. ADIM: İSİM GİRİŞ (MODERN) ---
   Widget _buildNicknameStep() {
     return Container(
-      width: 450,
-      padding: const EdgeInsets.all(32),
+      key: const ValueKey('nickname_step'),
+      width: 450, // Web'de çok genişlememesi için sınır
+      padding: const EdgeInsets.all(40),
       decoration: BoxDecoration(
         color: _surfaceColor,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 20,
+              offset: const Offset(0, 10))
+        ],
       ),
       child: Form(
         key: _formKey,
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                  color: _bgColor, shape: BoxShape.circle),
+              child: Icon(Icons.person_outline_rounded,
+                  size: 32, color: _primaryColor),
+            ),
+            const SizedBox(height: 24),
             Text("web_join_title".tr(),
+                textAlign: TextAlign.center,
                 style: TextStyle(
                     fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: _primaryColor)),
+                    fontWeight: FontWeight.w800,
+                    color: _primaryColor,
+                    letterSpacing: -0.5)),
+            const SizedBox(height: 8),
+            Text(
+              "Devam etmek için bir takma ad belirleyin", // Dil desteği eklenebilir
+              textAlign: TextAlign.center,
+              style: TextStyle(color: _secondaryColor, fontSize: 14),
+            ),
             const SizedBox(height: 32),
             TextFormField(
               controller: _nicknameController,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                  fontSize: 18, fontWeight: FontWeight.bold, color: _primaryColor),
               decoration: InputDecoration(
-                labelText: "web_nickname_label".tr(),
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                hintText: "web_nickname_label".tr(),
+                hintStyle: TextStyle(color: Colors.grey.shade400),
+                filled: true,
+                fillColor: _bgColor,
+                contentPadding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide.none),
+                focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(color: _primaryColor, width: 2)),
               ),
               validator: (v) =>
                   (v == null || v.isEmpty) ? "nickname_validation".tr() : null,
             ),
             const SizedBox(height: 32),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                  backgroundColor: _primaryColor,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 20),
-                  minimumSize: const Size(double.infinity, 50)),
-              onPressed: _submitNickname,
-              child: Text("nickname_button".tr()),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: _primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    elevation: 5,
+                    shadowColor: _primaryColor.withOpacity(0.3),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16))),
+                onPressed: _submitNickname,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text("nickname_button".tr(),
+                        style: const TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold)),
+                    const SizedBox(width: 8),
+                    const Icon(Icons.arrow_forward_rounded, size: 20)
+                  ],
+                ),
+              ),
             ),
           ],
         ),
@@ -299,6 +400,7 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
     );
   }
 
+  // --- 2. ADIM: SORU CEVAPLAMA (MODERN) ---
   Widget _buildAnsweringStep() {
     final currentQuestion = _questions[_currentQuestionIndex];
     final List<dynamic> rawAttachments =
@@ -306,13 +408,21 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
     List<dynamic> options = List.from(currentQuestion['options'] ?? []);
     final bool allowOpenEnded = currentQuestion['allowOpenEnded'] ?? false;
 
+    // AnimatedSwitcher için key değişimi
     return Container(
-      width: 500,
-      padding: const EdgeInsets.all(32),
+      key: ValueKey('question_$_currentQuestionIndex'),
+      width: 500, // İçeriği odaklar
+      padding: const EdgeInsets.all(32), // Web için geniş padding
       decoration: BoxDecoration(
         color: _surfaceColor,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: Colors.grey.shade100), // Hafif border
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 20,
+              offset: const Offset(0, 10))
+        ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -322,15 +432,17 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
               "${"answer_title_prefix".tr()} ${_currentQuestionIndex + 1}/${_questions.length}",
               textAlign: TextAlign.center,
               style: TextStyle(
-                  color: Colors.grey.shade500, fontWeight: FontWeight.bold)),
+                  color: _secondaryColor, fontWeight: FontWeight.bold, fontSize: 12, letterSpacing: 1)),
           const SizedBox(height: 16),
           Text(currentQuestion['questionText'] ?? "",
               textAlign: TextAlign.center,
               style: TextStyle(
-                  fontSize: 22,
+                  fontSize: 24,
                   fontWeight: FontWeight.w800,
-                  color: _primaryColor)),
-          const SizedBox(height: 24),
+                  color: _primaryColor,
+                  height: 1.3)),
+          const SizedBox(height: 32),
+          
           if (rawAttachments.isNotEmpty) ...[
             SizedBox(
               height: 300,
@@ -345,40 +457,57 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
                       return Image.network(attachment['path'],
                           fit: BoxFit.contain);
                     }
-                    return const Icon(Icons.insert_drive_file, size: 50);
+                    return Container(
+                      color: Colors.grey.shade100,
+                      child: const Center(
+                          child: Icon(Icons.insert_drive_file, size: 50, color: Colors.grey)),
+                    );
                   },
                 ),
               ),
             ),
             const SizedBox(height: 24),
           ],
+
           ...options.map((option) {
             final bool isSelected = _selectedAnswer == option;
             return Padding(
               padding: const EdgeInsets.only(bottom: 12.0),
               child: InkWell(
                 onTap: () => setState(() => _selectedAnswer = option),
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 18),
+                borderRadius: BorderRadius.circular(16),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
                   decoration: BoxDecoration(
-                    color: isSelected ? _primaryColor : _surfaceColor,
-                    borderRadius: BorderRadius.circular(12),
+                    color: isSelected ? _primaryColor : _bgColor,
+                    borderRadius: BorderRadius.circular(16),
                     border: Border.all(
                         color:
-                            isSelected ? _primaryColor : Colors.grey.shade300,
-                        width: 1.5),
+                            isSelected ? _primaryColor : Colors.transparent,
+                        width: 2),
                   ),
-                  child: Text(option,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: isSelected ? Colors.white : _primaryColor)),
+                  child: Row(
+                    children: [
+                      Icon(
+                        isSelected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                        color: isSelected ? Colors.white : Colors.grey.shade400,
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Text(option,
+                            style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                color: isSelected ? Colors.white : _primaryColor)),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             );
           }).toList(),
+
           if (allowOpenEnded)
             Column(
               children: [
@@ -387,23 +516,23 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
                   child: InkWell(
                     onTap: () =>
                         setState(() => _selectedAnswer = _otherOptionKey),
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 18),
+                    borderRadius: BorderRadius.circular(16),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
                       decoration: BoxDecoration(
-                        color: _surfaceColor,
-                        borderRadius: BorderRadius.circular(12),
+                        color: _bgColor,
+                        borderRadius: BorderRadius.circular(16),
                         border: Border.all(
                             color: _selectedAnswer == _otherOptionKey
                                 ? _primaryColor
-                                : Colors.grey.shade300,
-                            width:
-                                _selectedAnswer == _otherOptionKey ? 2 : 1.5),
+                                : Colors.transparent,
+                            width: 2),
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.edit_note,
+                          Icon(Icons.edit_note_rounded,
                               color: _selectedAnswer == _otherOptionKey
                                   ? _primaryColor
                                   : Colors.grey),
@@ -424,35 +553,50 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
                   TextField(
                     controller: _otherAnswerController,
                     autofocus: true,
-                    maxLength: 20,
+                    maxLength: 50,
+                    style: TextStyle(color: _primaryColor, fontWeight: FontWeight.bold),
                     decoration: InputDecoration(
                       hintText: "answer_other_hint".tr(),
+                      filled: true,
+                      fillColor: _bgColor,
                       border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12)),
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide.none),
                       focusedBorder: OutlineInputBorder(
-                          borderSide:
-                              BorderSide(color: _primaryColor, width: 2),
-                          borderRadius: BorderRadius.circular(12)),
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide(color: _primaryColor, width: 2)),
                     ),
                   ),
                 const SizedBox(height: 12),
               ],
             ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 32),
+          
           ElevatedButton(
             style: ElevatedButton.styleFrom(
                 backgroundColor: _primaryColor,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 22),
+                padding: const EdgeInsets.symmetric(vertical: 24),
+                elevation: 4,
+                shadowColor: _primaryColor.withOpacity(0.3),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16))),
             onPressed: _selectedAnswer == null ? null : _submitAndGoToNext,
-            child: Text(
-                _currentQuestionIndex < _questions.length - 1
-                    ? "answer_next_button".tr()
-                    : "answer_finish_button".tr(),
-                style:
-                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                    _currentQuestionIndex < _questions.length - 1
+                        ? "answer_next_button".tr()
+                        : "answer_finish_button".tr(),
+                    style:
+                        const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                const SizedBox(width: 8),
+                Icon(_currentQuestionIndex < _questions.length - 1 
+                  ? Icons.arrow_forward_rounded 
+                  : Icons.check_circle_rounded, size: 20)
+              ],
+            ),
           ),
         ],
       ),
