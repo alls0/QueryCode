@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // EKLENDİ
+import 'package:firebase_auth/firebase_auth.dart';
 import 'create_question_screen.dart';
 import 'qr_scanner_screen.dart';
 import 'my_events_screen.dart';
-import 'auth_screen.dart'; // EKLENDİ
+import 'auth_screen.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:google_fonts/google_fonts.dart'; // EKLENDİ: Font paketi
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -309,8 +310,7 @@ class HomeScreen extends StatelessWidget {
       );
     }
 
-    // --- GEÇMİŞ KONTROLÜ ---
-  // --- GEÇMİŞ KONTROLÜ (MODERN TASARIM) ---
+    // --- GEÇMİŞ KONTROLÜ (MODERN TASARIM) ---
     void _handleMyEventsClick(BuildContext context) {
       final user = FirebaseAuth.instance.currentUser;
       
@@ -584,14 +584,31 @@ class HomeScreen extends StatelessWidget {
               Center(
                 child: Column(
                   children: [
-                    const Text(
-                      "Query Code",
-                      style: TextStyle(
-                        fontFamily: 'Roboto',
-                        fontSize: 30,
-                        fontWeight: FontWeight.w800,
-                        color: primaryColor,
-                        letterSpacing: -1.0,
+                    // --- 1. SEÇENEK: MARKALI LOGO YAZISI ---
+                    RichText(
+                      textAlign: TextAlign.center,
+                      text: TextSpan(
+                        style: GoogleFonts.outfit(
+                          fontSize: 44,
+                          height: 1.2,
+                          letterSpacing: -1.0,
+                        ),
+                        children: [
+                          TextSpan(
+                            text: 'Query',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold, // Ekstra Kalın
+                              color: primaryColor, // Koyu Lacivert
+                            ),
+                          ),
+                          TextSpan(
+                            text: 'Code',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700, // Daha İnce
+                              color: const Color.fromARGB(255, 0, 0, 0), // Marka Mavisi
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -618,10 +635,10 @@ class HomeScreen extends StatelessWidget {
                     Text(
                       "homeTitle".tr(),
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
+                      style: GoogleFonts.outfit(
                         fontSize: 24,
                         color: primaryColor,
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w600,
                         letterSpacing: -0.5,
                       ),
                     ),

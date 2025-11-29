@@ -29,6 +29,7 @@ dependencies: # <--- BURASI KRİTİK: İKİ BOŞLUKLU HİZALANMALI
   # --- YENİ EKLENEN PAKETLERİN DOĞRU YERİ ---
   path_provider: ^2.1.1 
   share_plus: ^7.2.1 
+  google_fonts: ^6.3.2
   # ----------------------------------------
 
 dev_dependencies:

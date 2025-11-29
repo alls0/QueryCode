@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:easy_localization/easy_localization.dart'; // YENİ: Paketi import et
+import 'package:easy_localization/easy_localization.dart';
+import 'package:google_fonts/google_fonts.dart'; // Font paketi eklendi
 
 // Diğer ekranları import ediyoruz
 import 'screens/home_screen.dart';
@@ -11,14 +12,14 @@ import 'screens/web_answering_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // YENİ: Dil paketini başlat
+  // Dil paketini başlat
   await EasyLocalization.ensureInitialized();
 
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // YENİ: Uygulamayı EasyLocalization ile sarmala
+  // Uygulamayı EasyLocalization ile sarmala
   runApp(
     EasyLocalization(
       supportedLocales: const [Locale('tr'), Locale('en')],
@@ -38,50 +39,53 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'QueryCode',
 
-      // YENİ: Dil ayarlarını MaterialApp'e bildir
+      // Dil ayarlarını MaterialApp'e bildir
       localizationsDelegates: context.localizationDelegates,
       supportedLocales: context.supportedLocales,
       locale: context.locale,
 
       theme: ThemeData(
         scaffoldBackgroundColor: const Color(0xFFF4F7FB),
-        fontFamily: 'Roboto',
+        
+        // --- FONT AYARLARI (OUTFIT) ---
+        // Uygulamanın tüm metin stillerini Outfit yapıyoruz
+        textTheme: GoogleFonts.outfitTextTheme(
+          Theme.of(context).textTheme,
+        ),
+        
+        // Bazı widget'lar (örn. AppBar) textTheme yerine fontFamily kullanır,
+        // garanti olması için bunu da ekliyoruz.
+        fontFamily: GoogleFonts.outfit().fontFamily,
+        // -----------------------------
       ),
 
-      // Mevcut web yönlendirme mantığınızı koruyoruz
+      // Web yönlendirme mantığı
       home: _getInitialScreen(),
     );
   }
 
-  // Bu fonksiyona hiç dokunmadık, olduğu gibi çalışmaya devam ediyor
-  // Dosya: lib/main.dart
-// MEVCUT _getInitialScreen() FONKSİYONUNUN TAMAMINI DEĞİŞTİR:
-
   Widget _getInitialScreen() {
     if (kIsWeb) {
       final uri = Uri.base;
-      print('Tarayıcı URI tespit edildi: $uri');
+      // print('Tarayıcı URI tespit edildi: $uri'); // Gerekirse debug için açılabilir
 
       final path = uri.path;
-      print('Path yolu: $path');
+      // print('Path yolu: $path');
 
       // 1. ADIM: /event/ID yolu kontrol edilir
       if (path.startsWith('/event/')) {
         final eventId = path.substring('/event/'.length);
         if (eventId.isNotEmpty) {
-          print(
-              'Etkinlik ID bulundu: $eventId. WebAnsweringScreen yükleniyor.');
+          // print('Etkinlik ID bulundu: $eventId. WebAnsweringScreen yükleniyor.');
           return WebAnsweringScreen(eventId: eventId);
         }
       }
 
-      // 2. ADIM (FIX): Eğer yol /event/ID değilse (yani / ise),
-      // direkt olarak mobil uygulamanın ana ekranını (HomeScreen) yükle.
-      print(
-          'Geçerli etkinlik yolu bulunamadı. Varsayılan Ana Ekran (HomeScreen) yükleniyor.');
+      // 2. ADIM: Eğer yol /event/ID değilse, ana ekranı yükle.
       return const HomeScreen();
     }
-    // Mobil platformlar için eski mantık aynı kalır
+    
+    // Mobil platformlar için
     return const HomeScreen();
   }
 }
