@@ -6,14 +6,13 @@ import 'qr_scanner_screen.dart';
 import 'my_events_screen.dart';
 import 'auth_screen.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:google_fonts/google_fonts.dart'; // EKLENDİ: Font paketi
+import 'package:google_fonts/google_fonts.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
-  // --- Geri Bildirim Modal (Mevcut kod aynen korundu) ---
+  // --- Geri Bildirim Modal ---
   void _showFeedbackModal(BuildContext context) {
-    // Tasarım Renkleri
     final Color primaryDark = const Color(0xFF1A202C);
     final Color primaryBlue = const Color(0xFF3182CE);
     final Color bgLight = const Color(0xFFF8FAFC);
@@ -190,7 +189,6 @@ class HomeScreen extends StatelessWidget {
                                 setModalState(() => isLoading = true);
 
                                 try {
-                                  // Eğer kullanıcı giriş yapmışsa ID'sini de ekleyelim
                                   final user =
                                       FirebaseAuth.instance.currentUser;
 
@@ -203,8 +201,8 @@ class HomeScreen extends StatelessWidget {
                                     'createdAt': FieldValue.serverTimestamp(),
                                     'platform':
                                         Theme.of(context).platform.toString(),
-                                    'userId': user?.uid, // Opsiyonel
-                                    'userEmail': user?.email, // Opsiyonel
+                                    'userId': user?.uid,
+                                    'userEmail': user?.email,
                                   });
 
                                   if (context.mounted) {
@@ -258,6 +256,7 @@ class HomeScreen extends StatelessWidget {
     const Color textColor = Color(0xFF2D3748);
     const Color iconColor = Color(0xFF4A5568);
 
+    // --- Info Dialog ---
     void showInfoDialog(BuildContext context) {
       showDialog(
         context: context,
@@ -302,30 +301,33 @@ class HomeScreen extends StatelessWidget {
       );
     }
 
-    // --- LOGOUT FONKSİYONU ---
+    // --- Logout Fonksiyonu ---
     Future<void> _signOut(BuildContext context) async {
       await FirebaseAuth.instance.signOut();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Çıkış yapıldı")),
+        SnackBar(
+          content: Text("auth_login_required_title"
+              .tr()), // "Giriş yapmalısınız" yerine "Çıkış yapıldı" mesajı verilebilir veya bu text generic kullanılabilir
+          backgroundColor: Colors.grey,
+        ),
       );
     }
 
-    // --- GEÇMİŞ KONTROLÜ (MODERN TASARIM) ---
+    // --- Geçmiş Etkinlikler Kontrolü ---
     void _handleMyEventsClick(BuildContext context) {
       final user = FirebaseAuth.instance.currentUser;
-      
+
       if (user == null) {
-        // Kullanıcı giriş yapmamışsa -> MODERN DIALOG GÖSTER
         showDialog(
           context: context,
           builder: (ctx) => Dialog(
-            backgroundColor: Colors.transparent, // Arkaplanı şeffaf yapıyoruz ki kendi şeklimizi verelim
-            insetPadding: const EdgeInsets.symmetric(horizontal: 24), // Kenar boşlukları
+            backgroundColor: Colors.transparent,
+            insetPadding: const EdgeInsets.symmetric(horizontal: 24),
             child: Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(24), // Yuvarlak köşeler
+                borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.1),
@@ -335,51 +337,43 @@ class HomeScreen extends StatelessWidget {
                 ],
               ),
               child: Column(
-                mainAxisSize: MainAxisSize.min, // İçerik kadar yer kapla
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  // 1. İKON ALANI
                   Container(
                     padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       color: Colors.white,
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
-                      Icons.lock_person_rounded, // Kilitli kişi ikonu
-                      color: const Color(0xFF1A202C), // Primary Blue
+                      Icons.lock_person_rounded,
+                      color: Color(0xFF1A202C),
                       size: 40,
                     ),
                   ),
                   const SizedBox(height: 10),
-
-                  // 2. BAŞLIK
                   Text(
-                    "auth_login_required_title".tr(), // "Giriş Yapmalısınız"
+                    "auth_login_required_title".tr(),
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF1A202C), // Primary Dark
+                      color: Color(0xFF1A202C),
                     ),
                   ),
                   const SizedBox(height: 12),
-
-                  // 3. AÇIKLAMA
                   Text(
-                    "auth_login_required_desc".tr(), // "Bu özelliği kullanmak için..."
+                    "auth_login_required_desc".tr(),
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.grey.shade600,
-                      height: 1.5, // Satır arası boşluk okunabilirlik için
+                      height: 1.5,
                     ),
                   ),
                   const SizedBox(height: 24),
-
-                  // 4. BUTONLAR (YAN YANA)
                   Row(
                     children: [
-                      // Vazgeç Butonu
                       Expanded(
                         child: TextButton(
                           onPressed: () => Navigator.pop(ctx),
@@ -399,15 +393,14 @@ class HomeScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 12),
-                      
-                      // Giriş Yap Butonu
                       Expanded(
                         child: ElevatedButton(
                           onPressed: () {
                             Navigator.pop(ctx);
                             Navigator.push(
                               context,
-                              MaterialPageRoute(builder: (ctx) => const AuthScreen()),
+                              MaterialPageRoute(
+                                  builder: (ctx) => const AuthScreen()),
                             );
                           },
                           style: ElevatedButton.styleFrom(
@@ -435,10 +428,35 @@ class HomeScreen extends StatelessWidget {
           ),
         );
       } else {
-        // Kullanıcı giriş yapmışsa
         Navigator.push(context,
             MaterialPageRoute(builder: (context) => const MyEventsScreen()));
       }
+    }
+
+    // Ortak Küçük Buton Tasarımı (Sol menü için)
+    Widget buildMiniButton(
+        {required IconData icon, required VoidCallback onTap}) {
+      return GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 44,
+          height: 44,
+          margin: const EdgeInsets.only(bottom: 12), // Alt alta boşluk
+          decoration: BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.grey.shade200),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.03),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Icon(icon, color: iconColor, size: 22),
+        ),
+      );
     }
 
     return Scaffold(
@@ -449,142 +467,191 @@ class HomeScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // --- ÜST BAR (Dil, Feedback, Info, AUTH) ---
+              // --- ÜST BAR (Sol: Menü, Sağ: Auth) ---
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start, // Yukarı hizala
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Sol Taraf: Dil Seçimi
-                  PopupMenuButton<String>(
-                    offset: const Offset(0, 40),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16)),
-                    surfaceTintColor: Colors.white,
-                    color: Colors.white,
-                    onSelected: (String value) {
-                      if (value == 'TR')
-                        context.setLocale(const Locale('tr'));
-                      else if (value == 'EN')
-                        context.setLocale(const Locale('en'));
-                    },
-                    itemBuilder: (context) => [
-                      const PopupMenuItem(
-                          value: 'TR', child: Text('🇹🇷 Türkçe')),
-                      const PopupMenuItem(
-                          value: 'EN', child: Text('🇬🇧 English')),
-                    ],
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 8),
-                      decoration: BoxDecoration(
+                  // SOL TARAF: Dikey Menü (Dil, Info, Feedback)
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // 1. Dil Seçimi
+                      PopupMenuButton<String>(
+                        offset: const Offset(0, 40),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16)),
+                        surfaceTintColor: Colors.white,
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(30),
-                        border: Border.all(color: Colors.grey.shade200),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.language,
-                              color: iconColor, size: 20),
-                          const SizedBox(width: 8),
-                          Text("language".tr(),
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  color: textColor)),
-                          const Icon(Icons.keyboard_arrow_down_rounded,
-                              color: iconColor, size: 18),
+                        onSelected: (String value) {
+                          if (value == 'TR')
+                            context.setLocale(const Locale('tr'));
+                          else if (value == 'EN')
+                            context.setLocale(const Locale('en'));
+                        },
+                        itemBuilder: (context) => [
+                          const PopupMenuItem(
+                              value: 'TR', child: Text('🇹🇷 Türkçe')),
+                          const PopupMenuItem(
+                              value: 'EN', child: Text('🇬🇧 English')),
                         ],
+                        child: Container(
+                          width: 44,
+                          height: 44,
+                          margin: const EdgeInsets.only(bottom: 12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.grey.shade200),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.03),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(Icons.language,
+                              color: Color(0xFF4A5568), size: 22),
+                        ),
                       ),
-                    ),
+
+                      // 2. Info Butonu
+                      buildMiniButton(
+                        icon: Icons.info_outline_rounded,
+                        onTap: () => showInfoDialog(context),
+                      ),
+
+                      // 3. Feedback Butonu
+                      buildMiniButton(
+                        icon: Icons.chat_bubble_outline_rounded,
+                        onTap: () => _showFeedbackModal(context),
+                      ),
+                    ],
                   ),
 
-                  // Sağ Taraf: İkonlar Grubu
-                  Row(
-                    children: [
-                      // Feedback
-                      GestureDetector(
-                        onTap: () => _showFeedbackModal(context),
-                        child: Container(
-                          padding: const EdgeInsets.all(10),
+                  // SAĞ TARAF: Auth (Login veya User+Logout)
+                  StreamBuilder<User?>(
+                    stream: FirebaseAuth.instance.authStateChanges(),
+                    builder: (context, authSnapshot) {
+                      if (authSnapshot.hasData && authSnapshot.data != null) {
+                        // --- GİRİŞ YAPILMIŞSA ---
+                        final User user = authSnapshot.data!;
+
+                        return Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 6),
                           decoration: BoxDecoration(
                             color: Colors.white,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.grey.shade200),
-                          ),
-                          child: const Icon(Icons.chat_bubble_outline_rounded,
-                              color: iconColor, size: 24),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-
-                      // Info
-                      GestureDetector(
-                        onTap: () => showInfoDialog(context),
-                        child: Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.grey.shade200),
-                          ),
-                          child: const Icon(Icons.info_outline_rounded,
-                              color: iconColor, size: 24),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-
-                      // --- AUTH DURUMUNA GÖRE İKON ---
-                      StreamBuilder<User?>(
-                        stream: FirebaseAuth.instance.authStateChanges(),
-                        builder: (context, snapshot) {
-                          if (snapshot.hasData) {
-                            // Giriş yapılmış: Çıkış butonu (veya profil)
-                            return GestureDetector(
-                              onTap: () => _signOut(context),
-                              child: Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: Colors.red.shade50,
-                                  shape: BoxShape.circle,
-                                  border:
-                                      Border.all(color: Colors.red.shade100),
-                                ),
-                                child: Icon(Icons.logout_rounded,
-                                    color: Colors.red.shade400, size: 24),
+                            borderRadius: BorderRadius.circular(30),
+                            border: Border.all(color: Colors.grey.shade300),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 10,
+                                offset: const Offset(0, 2),
                               ),
-                            );
-                          } else {
-                            // Giriş yapılmamış: Giriş butonu
-                            return GestureDetector(
-                              onTap: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (context) =>
-                                          const AuthScreen())),
-                              child: Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: primaryColor, // Koyu renk
-                                  shape: BoxShape.circle,
-                                  border: Border.all(color: primaryColor),
-                                ),
-                                child: const Icon(Icons.person_rounded,
-                                    color: Colors.white, size: 24),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // --- KULLANICI ADINI ÇEKME ---
+                              FutureBuilder<DocumentSnapshot>(
+                                future: FirebaseFirestore.instance
+                                    .collection('users')
+                                    .doc(user.uid)
+                                    .get(),
+                                builder: (context, snapshot) {
+                                  if (snapshot.hasData &&
+                                      snapshot.data!.exists) {
+                                    Map<String, dynamic> data = snapshot.data!
+                                        .data() as Map<String, dynamic>;
+                                    String username =
+                                        data['username'] ?? 'User';
+
+                                    return Padding(
+                                      padding: const EdgeInsets.only(
+                                          left: 12, right: 8),
+                                      child: Text(
+                                        username,
+                                        style: GoogleFonts.outfit(
+                                          fontWeight: FontWeight.bold,
+                                          color: primaryColor,
+                                          fontSize: 15,
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                  // Yüklenirken veya veri yoksa sadece ikon görünür
+                                  return const SizedBox(width: 8);
+                                },
                               ),
-                            );
-                          }
-                        },
-                      ),
-                    ],
+
+                              // --- ÇIKIŞ BUTONU ---
+                              GestureDetector(
+                                onTap: () => _signOut(context),
+                                child: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red.shade50,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(Icons.logout_rounded,
+                                      color: Colors.red.shade400, size: 20),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      } else {
+                        // --- GİRİŞ YAPILMAMIŞSA ---
+                        return GestureDetector(
+                          onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => const AuthScreen())),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: primaryColor,
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: primaryColor.withOpacity(0.3),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.login_rounded,
+                                    color: Colors.white, size: 20),
+                                const SizedBox(width: 8),
+                                Text(
+                                  "auth_login".tr(),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }
+                    },
                   ),
                 ],
               ),
 
-              const SizedBox(height: 50),
-
-              // --- LOGO ALANI ---
+              // --- LOGO ALANI (Biraz daha yukarı kaydı) ---
+              const SizedBox(height: 20),
               Center(
                 child: Column(
                   children: [
-                    // --- 1. SEÇENEK: MARKALI LOGO YAZISI ---
                     RichText(
                       textAlign: TextAlign.center,
                       text: TextSpan(
@@ -596,16 +663,16 @@ class HomeScreen extends StatelessWidget {
                         children: [
                           TextSpan(
                             text: 'Query',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold, // Ekstra Kalın
-                              color: primaryColor, // Koyu Lacivert
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: primaryColor,
                             ),
                           ),
-                          TextSpan(
+                          const TextSpan(
                             text: 'Code',
                             style: TextStyle(
-                              fontWeight: FontWeight.w700, // Daha İnce
-                              color: const Color.fromARGB(255, 0, 0, 0), // Marka Mavisi
+                              fontWeight: FontWeight.w700,
+                              color: Colors.black,
                             ),
                           ),
                         ],
@@ -617,11 +684,10 @@ class HomeScreen extends StatelessWidget {
                       height: 190,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: const Color.fromARGB(255, 255, 255, 255),
+                        color: Colors.white,
                         boxShadow: [
                           BoxShadow(
-                            color: const Color.fromARGB(255, 109, 107, 107)
-                                .withOpacity(0.22),
+                            color: Colors.grey.withOpacity(0.22),
                             blurRadius: 5,
                             spreadRadius: 8,
                             offset: const Offset(0, 10),
@@ -642,14 +708,13 @@ class HomeScreen extends StatelessWidget {
                         letterSpacing: -0.5,
                       ),
                     ),
-                    const SizedBox(height: 8),
                   ],
                 ),
               ),
 
               const Spacer(flex: 2),
 
-              // --- ANA BUTONLAR ---
+              // --- ANA BUTONLAR (Mevcut kod aynen korundu) ---
               ElevatedButton(
                 onPressed: () => Navigator.push(
                     context,
@@ -710,8 +775,6 @@ class HomeScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 12),
-
-                  // --- HISTORY BUTONU GÜNCELLENDİ ---
                   GestureDetector(
                     onTap: () => _handleMyEventsClick(context),
                     child: Container(

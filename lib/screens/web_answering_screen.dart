@@ -248,7 +248,8 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
             ? PreferredSize(
                 preferredSize: const Size.fromHeight(6.0),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 0), // Full width
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 0), // Full width
                   child: LinearProgressIndicator(
                     value: progress,
                     backgroundColor: Colors.grey.shade200,
@@ -298,10 +299,9 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
     // AnimatedSwitcher ile adımlar arası yumuşak geçiş
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 500),
-      transitionBuilder: (child, animation) => FadeTransition(opacity: animation, child: child),
-      child: _currentStep == 0
-          ? _buildNicknameStep()
-          : _buildAnsweringStep(),
+      transitionBuilder: (child, animation) =>
+          FadeTransition(opacity: animation, child: child),
+      child: _currentStep == 0 ? _buildNicknameStep() : _buildAnsweringStep(),
     );
   }
 
@@ -328,8 +328,8 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
           children: [
             Container(
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                  color: _bgColor, shape: BoxShape.circle),
+              decoration:
+                  BoxDecoration(color: _bgColor, shape: BoxShape.circle),
               child: Icon(Icons.person_outline_rounded,
                   size: 32, color: _primaryColor),
             ),
@@ -352,13 +352,16 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
               controller: _nicknameController,
               textAlign: TextAlign.center,
               style: TextStyle(
-                  fontSize: 18, fontWeight: FontWeight.bold, color: _primaryColor),
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: _primaryColor),
               decoration: InputDecoration(
                 hintText: "web_nickname_label".tr(),
                 hintStyle: TextStyle(color: Colors.grey.shade400),
                 filled: true,
                 fillColor: _bgColor,
-                contentPadding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
+                contentPadding:
+                    const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
                 border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
                     borderSide: BorderSide.none),
@@ -432,7 +435,10 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
               "${"answer_title_prefix".tr()} ${_currentQuestionIndex + 1}/${_questions.length}",
               textAlign: TextAlign.center,
               style: TextStyle(
-                  color: _secondaryColor, fontWeight: FontWeight.bold, fontSize: 12, letterSpacing: 1)),
+                  color: _secondaryColor,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                  letterSpacing: 1)),
           const SizedBox(height: 16),
           Text(currentQuestion['questionText'] ?? "",
               textAlign: TextAlign.center,
@@ -442,31 +448,137 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
                   color: _primaryColor,
                   height: 1.3)),
           const SizedBox(height: 32),
-          
+
+          // --- WEB İÇİN MEDYA ALANI (GÜNCELLENDİ) ---
           if (rawAttachments.isNotEmpty) ...[
             SizedBox(
               height: 300,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: PageView.builder(
-                  controller: _mediaPageController,
-                  itemCount: rawAttachments.length,
-                  itemBuilder: (context, idx) {
-                    final attachment = rawAttachments[idx];
-                    if (attachment['type'] == 'image') {
-                      return Image.network(attachment['path'],
-                          fit: BoxFit.contain);
-                    }
-                    return Container(
-                      color: Colors.grey.shade100,
-                      child: const Center(
-                          child: Icon(Icons.insert_drive_file, size: 50, color: Colors.grey)),
-                    );
-                  },
-                ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  // 1. Resim Görüntüleyici
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: PageView.builder(
+                      controller: _mediaPageController,
+                      itemCount: rawAttachments.length,
+                      onPageChanged: (idx) =>
+                          setState(() => _currentMediaIndex = idx),
+                      itemBuilder: (context, idx) {
+                        final attachment = rawAttachments[idx];
+                        if (attachment['type'] == 'image') {
+                          return Image.network(attachment['path'],
+                              fit: BoxFit.contain);
+                        }
+                        return Container(
+                          color: Colors.grey.shade100,
+                          child: const Center(
+                              child: Icon(Icons.insert_drive_file,
+                                  size: 50, color: Colors.grey)),
+                        );
+                      },
+                    ),
+                  ),
+
+                  // 2. Sayaç (Örn: 1/3)
+                  if (rawAttachments.length > 1)
+                    Positioned(
+                      top: 12,
+                      right: 12,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.6),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          "${_currentMediaIndex + 1}/${rawAttachments.length}",
+                          style: const TextStyle(
+                              color: Colors.white, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+
+                  // 3. Sol Ok
+                  if (_currentMediaIndex > 0)
+                    Positioned(
+                      left: 10,
+                      child: InkWell(
+                        onTap: () {
+                          _mediaPageController.previousPage(
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.easeInOut);
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.9),
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 8)
+                              ]),
+                          child: Icon(Icons.arrow_back_ios_new_rounded,
+                              color: _primaryColor),
+                        ),
+                      ),
+                    ),
+
+                  // 4. Sağ Ok
+                  if (_currentMediaIndex < rawAttachments.length - 1)
+                    Positioned(
+                      right: 10,
+                      child: InkWell(
+                        onTap: () {
+                          _mediaPageController.nextPage(
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.easeInOut);
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.9),
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 8)
+                              ]),
+                          child: Icon(Icons.arrow_forward_ios_rounded,
+                              color: _primaryColor),
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
-            const SizedBox(height: 24),
+
+            // Alt Nokta Göstergesi (Web için de eklendi)
+            if (rawAttachments.length > 1)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(
+                    rawAttachments.length,
+                    (index) => AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                      height: 8,
+                      width: _currentMediaIndex == index ? 24 : 8,
+                      decoration: BoxDecoration(
+                        color: _currentMediaIndex == index
+                            ? _primaryColor
+                            : Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            const SizedBox(height: 12),
           ],
 
           ...options.map((option) {
@@ -478,19 +590,21 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
                 borderRadius: BorderRadius.circular(16),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
                   decoration: BoxDecoration(
                     color: isSelected ? _primaryColor : _bgColor,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                        color:
-                            isSelected ? _primaryColor : Colors.transparent,
+                        color: isSelected ? _primaryColor : Colors.transparent,
                         width: 2),
                   ),
                   child: Row(
                     children: [
                       Icon(
-                        isSelected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                        isSelected
+                            ? Icons.radio_button_checked
+                            : Icons.radio_button_unchecked,
                         color: isSelected ? Colors.white : Colors.grey.shade400,
                       ),
                       const SizedBox(width: 16),
@@ -498,8 +612,11 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
                         child: Text(option,
                             style: TextStyle(
                                 fontSize: 16,
-                                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                                color: isSelected ? Colors.white : _primaryColor)),
+                                fontWeight: isSelected
+                                    ? FontWeight.bold
+                                    : FontWeight.w500,
+                                color:
+                                    isSelected ? Colors.white : _primaryColor)),
                       ),
                     ],
                   ),
@@ -519,7 +636,8 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
                     borderRadius: BorderRadius.circular(16),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
-                      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 20, horizontal: 24),
                       decoration: BoxDecoration(
                         color: _bgColor,
                         borderRadius: BorderRadius.circular(16),
@@ -554,7 +672,8 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
                     controller: _otherAnswerController,
                     autofocus: true,
                     maxLength: 50,
-                    style: TextStyle(color: _primaryColor, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                        color: _primaryColor, fontWeight: FontWeight.bold),
                     decoration: InputDecoration(
                       hintText: "answer_other_hint".tr(),
                       filled: true,
@@ -564,14 +683,15 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
                           borderSide: BorderSide.none),
                       focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
-                          borderSide: BorderSide(color: _primaryColor, width: 2)),
+                          borderSide:
+                              BorderSide(color: _primaryColor, width: 2)),
                     ),
                   ),
                 const SizedBox(height: 12),
               ],
             ),
           const SizedBox(height: 32),
-          
+
           ElevatedButton(
             style: ElevatedButton.styleFrom(
                 backgroundColor: _primaryColor,
@@ -589,12 +709,14 @@ class _WebAnsweringScreenState extends State<WebAnsweringScreen> {
                     _currentQuestionIndex < _questions.length - 1
                         ? "answer_next_button".tr()
                         : "answer_finish_button".tr(),
-                    style:
-                        const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.bold)),
                 const SizedBox(width: 8),
-                Icon(_currentQuestionIndex < _questions.length - 1 
-                  ? Icons.arrow_forward_rounded 
-                  : Icons.check_circle_rounded, size: 20)
+                Icon(
+                    _currentQuestionIndex < _questions.length - 1
+                        ? Icons.arrow_forward_rounded
+                        : Icons.check_circle_rounded,
+                    size: 20)
               ],
             ),
           ),

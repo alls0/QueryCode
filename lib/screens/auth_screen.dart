@@ -12,16 +12,16 @@ class AuthScreen extends StatefulWidget {
 
 class _AuthScreenState extends State<AuthScreen> {
   final _formKey = GlobalKey<FormState>();
-  
+
   // Form Verileri
   String _email = '';
   String _password = '';
   String _firstName = ''; // Yeni
-  String _lastName = '';  // Yeni
-  String _username = '';  // Yeni
-  
+  String _lastName = ''; // Yeni
+  String _username = ''; // Yeni
+
   // UI Durumları
-  bool _isLogin = true; 
+  bool _isLogin = true;
   bool _isLoading = false;
   bool _isPasswordVisible = false;
 
@@ -47,7 +47,8 @@ class _AuthScreenState extends State<AuthScreen> {
       } else {
         // --- KAYIT OL ---
         // 1. Kullanıcıyı Firebase Auth'da oluştur
-        final userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        final userCredential =
+            await FirebaseAuth.instance.createUserWithEmailAndPassword(
           email: _email,
           password: _password,
         );
@@ -72,45 +73,46 @@ class _AuthScreenState extends State<AuthScreen> {
 
       // İşlem başarılıysa ekranı kapat
       if (mounted) Navigator.of(context).pop();
-
     } on FirebaseAuthException catch (e) {
-  debugPrint("Firebase Auth Error Code: ${e.code}");
-  String message = 'auth_error_generic'.tr(); // Varsayılan: Genel Hata
+      debugPrint("Firebase Auth Error Code: ${e.code}");
+      String message = 'auth_error_generic'.tr(); // Varsayılan: Genel Hata
 
-  if (e.code == 'user-not-found') {
-    message = 'auth_register_required'.tr();
-  } else if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
-    message = 'auth_wrong_password'.tr();
-  } else if (e.code == 'email-already-in-use') {
-    message = 'auth_email_in_use'.tr(); // 🔥 Bu en sık karşılaşılan hatadır.
-  } else if (e.code == 'weak-password') {
-    message = 'auth_weak_password'.tr();
-  } else if (e.code == 'invalid-email') {
-    message = 'auth_email_invalid'.tr();
-  } else if (e.code == 'channel-error') {
-    // Genellikle mobil cihazda olmayan bir işlemi çağırmaktan kaynaklanır
-    message = 'auth_channel_error'.tr(); 
-  }
+      if (e.code == 'user-not-found') {
+        message = 'auth_register_required'.tr();
+      } else if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
+        message = 'auth_wrong_password'.tr();
+      } else if (e.code == 'email-already-in-use') {
+        message =
+            'auth_email_in_use'.tr(); // 🔥 Bu en sık karşılaşılan hatadır.
+      } else if (e.code == 'weak-password') {
+        message = 'auth_weak_password'.tr();
+      } else if (e.code == 'invalid-email') {
+        message = 'auth_email_invalid'.tr();
+      } else if (e.code == 'channel-error') {
+        // Genellikle mobil cihazda olmayan bir işlemi çağırmaktan kaynaklanır
+        message = 'auth_channel_error'.tr();
+      }
 
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text(message),
-      backgroundColor: Colors.redAccent,
-      // ...
-    ),
-  );
-} catch (e) {
-  // ⚡ Beklenmeyen diğer hatalar (Örn: İnternet bağlantısı yok, Firestore yazma hatası)
-  ScaffoldMessenger.of(context).showSnackBar(
-    // Artık generic olarak "Hata: $e" yerine kullanıcı dostu bir mesaj gösteriyoruz.
-    SnackBar(
-      content: Text("auth_unexpected_error".tr()),
-      backgroundColor: Colors.red,
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-    ),
-  );
-} finally {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.redAccent,
+          // ...
+        ),
+      );
+    } catch (e) {
+      // ⚡ Beklenmeyen diğer hatalar (Örn: İnternet bağlantısı yok, Firestore yazma hatası)
+      ScaffoldMessenger.of(context).showSnackBar(
+        // Artık generic olarak "Hata: $e" yerine kullanıcı dostu bir mesaj gösteriyoruz.
+        SnackBar(
+          content: Text("auth_unexpected_error".tr()),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
+    } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
@@ -133,14 +135,16 @@ class _AuthScreenState extends State<AuthScreen> {
                     tag: 'app_logo',
                     child: Image.asset(
                       'assets/images/logo4.png',
-                      height: 80, // Logo biraz küçültüldü, form uzadığı için yer açtık
+                      height:
+                          140, // Logo biraz küçültüldü, form uzadığı için yer açtık
                       errorBuilder: (context, error, stackTrace) {
-                        return Icon(Icons.qr_code_2, size: 80, color: _primaryBlue);
+                        return Icon(Icons.qr_code_2,
+                            size: 80, color: _primaryBlue);
                       },
                     ),
                   ),
                   const SizedBox(height: 20),
-                  
+
                   // Başlıklar
                   Text(
                     _isLogin ? "auth_welcome".tr() : "auth_create_account".tr(),
@@ -153,9 +157,7 @@ class _AuthScreenState extends State<AuthScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    _isLogin 
-                      ? "auth_welcome_sub".tr()
-                      : "auth_create_sub".tr(),
+                    _isLogin ? "auth_welcome_sub".tr() : "auth_create_sub".tr(),
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.grey[600],
@@ -174,11 +176,14 @@ class _AuthScreenState extends State<AuthScreen> {
                             children: [
                               Expanded(
                                 child: _buildModernInput(
-                                  label: 'auth_name'.tr(), // Çeviri anahtarı ekleyin
+                                  label: 'auth_name'
+                                      .tr(), // Çeviri anahtarı ekleyin
                                   icon: Icons.person_outline,
-                                  onSaved: (value) => _firstName = value!.trim(),
+                                  onSaved: (value) =>
+                                      _firstName = value!.trim(),
                                   validator: (value) {
-                                    if (value == null || value.length < 2) return 'Gerekli';
+                                    if (value == null || value.length < 2)
+                                      return 'Gerekli';
                                     return null;
                                   },
                                 ),
@@ -190,7 +195,8 @@ class _AuthScreenState extends State<AuthScreen> {
                                   icon: Icons.person_outline,
                                   onSaved: (value) => _lastName = value!.trim(),
                                   validator: (value) {
-                                    if (value == null || value.length < 2) return 'Gerekli';
+                                    if (value == null || value.length < 2)
+                                      return 'Gerekli';
                                     return null;
                                   },
                                 ),
@@ -203,13 +209,14 @@ class _AuthScreenState extends State<AuthScreen> {
                             icon: Icons.alternate_email,
                             onSaved: (value) => _username = value!.trim(),
                             validator: (value) {
-                              if (value == null || value.length < 3) return 'En az 3 karakter';
+                              if (value == null || value.length < 3)
+                                return 'En az 3 karakter';
                               return null;
                             },
                           ),
                           const SizedBox(height: 12),
                         ],
-                        
+
                         // --- ORTAK ALANLAR (EMAIL & PASSWORD) ---
                         _buildModernInput(
                           label: 'auth_email'.tr(),
@@ -255,7 +262,8 @@ class _AuthScreenState extends State<AuthScreen> {
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: _primaryColor,
                                   foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 16),
                                   elevation: 2,
                                   shadowColor: _primaryColor.withOpacity(0.4),
                                   shape: RoundedRectangleBorder(
@@ -263,11 +271,12 @@ class _AuthScreenState extends State<AuthScreen> {
                                   ),
                                 ),
                                 child: Text(
-                                  _isLogin ? 'auth_login'.tr() : 'auth_register'.tr(),
+                                  _isLogin
+                                      ? 'auth_login'.tr()
+                                      : 'auth_register'.tr(),
                                   style: const TextStyle(
-                                    fontSize: 16, 
-                                    fontWeight: FontWeight.bold
-                                  ),
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold),
                                 ),
                               ),
                               const SizedBox(height: 16),
@@ -397,7 +406,8 @@ class _AuthScreenState extends State<AuthScreen> {
           ),
           filled: true,
           fillColor: Colors.white,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         ),
         validator: validator,
         onSaved: onSaved,

@@ -27,7 +27,7 @@ android {
         applicationId = "com.example.query_code"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = 23  // <--- 2. DEĞİŞİKLİK: Firebase için en az 23 yaptık
+        minSdk = flutter.minSdkVersion  // <--- 2. DEĞİŞİKLİK: Firebase için en az 23 yaptık
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName

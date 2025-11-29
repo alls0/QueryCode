@@ -416,37 +416,126 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
   }
 
   // Medya Göstericisi
+  // Medya Göstericisi (GÜNCELLENDİ: Oklar ve Sayaç Eklendi)
   Widget _buildMediaCarousel(List<dynamic> attachments) {
+    if (attachments.isEmpty) return const SizedBox.shrink();
+
     return Column(
       children: [
         SizedBox(
           height: 220,
-          child: PageView.builder(
-            controller: _mediaPageController,
-            itemCount: attachments.length,
-            onPageChanged: (idx) => setState(() => _currentMediaIndex = idx),
-            itemBuilder: (context, idx) {
-              final attachment = attachments[idx];
-              final path = attachment['path']?.toString() ?? '';
-              return Container(
-                margin: const EdgeInsets.symmetric(horizontal: 4),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                  color: Colors.black12,
-                  image: attachment['type'] == 'image'
-                      ? DecorationImage(
-                          image: NetworkImage(path), fit: BoxFit.cover)
-                      : null,
+          child: Stack(
+            children: [
+              // 1. Resim Kaydırıcı
+              PageView.builder(
+                controller: _mediaPageController,
+                itemCount: attachments.length,
+                onPageChanged: (idx) =>
+                    setState(() => _currentMediaIndex = idx),
+                itemBuilder: (context, idx) {
+                  final attachment = attachments[idx];
+                  final path = attachment['path']?.toString() ?? '';
+                  return Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                      color: Colors.black12,
+                      image: attachment['type'] == 'image'
+                          ? DecorationImage(
+                              image: NetworkImage(path), fit: BoxFit.contain)
+                          : null,
+                    ),
+                    child: attachment['type'] != 'image'
+                        ? const Center(
+                            child: Icon(Icons.insert_drive_file,
+                                size: 40, color: Colors.white))
+                        : null,
+                  );
+                },
+              ),
+
+              // 2. Resim Sayacı (Sağ Üst Köşe - Örn: 1/3)
+              if (attachments.length > 1)
+                Positioned(
+                  top: 10,
+                  right: 14,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.6),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      "${_currentMediaIndex + 1}/${attachments.length}",
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold),
+                    ),
+                  ),
                 ),
-                child: attachment['type'] != 'image'
-                    ? const Center(
-                        child: Icon(Icons.insert_drive_file,
-                            size: 40, color: Colors.white))
-                    : null,
-              );
-            },
+
+              // 3. Sol Ok (Geri)
+              if (_currentMediaIndex > 0)
+                Positioned(
+                  left: 8,
+                  top: 0,
+                  bottom: 0,
+                  child: Center(
+                    child: GestureDetector(
+                      onTap: () {
+                        _mediaPageController.previousPage(
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeInOut);
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.8),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(color: Colors.black12, blurRadius: 4)
+                            ]),
+                        child: Icon(Icons.arrow_back_ios_new_rounded,
+                            size: 18, color: _primaryColor),
+                      ),
+                    ),
+                  ),
+                ),
+
+              // 4. Sağ Ok (İleri)
+              if (_currentMediaIndex < attachments.length - 1)
+                Positioned(
+                  right: 8,
+                  top: 0,
+                  bottom: 0,
+                  child: Center(
+                    child: GestureDetector(
+                      onTap: () {
+                        _mediaPageController.nextPage(
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeInOut);
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.8),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(color: Colors.black12, blurRadius: 4)
+                            ]),
+                        child: Icon(Icons.arrow_forward_ios_rounded,
+                            size: 18, color: _primaryColor),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
         ),
+
+        // Alt Noktalar (Dots) - Mevcut haliyle kalabilir
         if (attachments.length > 1)
           Padding(
             padding: const EdgeInsets.only(top: 12),
@@ -486,8 +575,7 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
           color: isSelected ? _primaryColor : _surfaceColor,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-              color: isSelected ? _primaryColor : Colors.transparent,
-              width: 2),
+              color: isSelected ? _primaryColor : Colors.transparent, width: 2),
           boxShadow: [
             if (!isSelected)
               BoxShadow(
@@ -592,8 +680,7 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide:
-                            BorderSide(color: _primaryColor, width: 2),
+                        borderSide: BorderSide(color: _primaryColor, width: 2),
                       ),
                     ),
                   ),
