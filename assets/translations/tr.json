@@ -182,5 +182,16 @@
     "limit_daily_reached": "Günlük etkinlik oluşturma limitine (10) ulaştınız. Lütfen yarın tekrar deneyin.",
     "limit_storage_full": "Etkinlik hafızanız dolu (15/15). Yeni etkinlik oluşturmak için lütfen 'Geçmiş Etkinliklerim'den eski kayıtları silin.",
     "go_to_events": "Etkinliklere Git",
-    "cancel": "İptal"
+    "cancel": "İptal",
+    "auth_forgot_password": "Şifremi Unuttum",
+    "auth_reset_password": "Şifre Sıfırlama",
+    "auth_reset_email_sent": "Şifre sıfırlama e-postası gönderildi",
+    "auth_reset_email_hint": "Kayıtlı e-posta adresinizi giriniz, şifre sıfırlama talimatları gönderilecektir.",
+    "auth_reset_button": "Sıfırlama E-postası Gönder",
+    "auth_reset_back_to_login": "Girişe Geri Dön",
+    "auth_forgot_password": "Şifremi Unuttum",
+    "auth_password_reset_sent": "Şifre sıfırlama e-postası gönderildi. Lütfen gelen kutunuzu kontrol edin.",
+    "auth_password_reset_error": "Şifre sıfırlama isteği başarısız oldu. Lütfen girdiğiniz e-posta adresini kontrol edin.",
+    "auth_login_google": "Google ile Giriş Yap",
+    "auth_google_error": "Google ile giriş yapılırken bir hata oluştu. Lütfen tekrar deneyin."
 }

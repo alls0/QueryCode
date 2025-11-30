@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart'; // <-- EKLENDİ
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:google_sign_in/google_sign_in.dart'; // <-- EKLENDİ
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -108,6 +109,186 @@ class _AuthScreenState extends State<AuthScreen> {
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  // ŞİFREMİ UNUTTUM METODU (Önceki Adımdan Restore Edildi)
+  Future<void> _forgotPassword() async {
+    _formKey.currentState!.save();
+
+    if (_email.isEmpty || !_email.contains('@')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('auth_email_invalid'.tr(),
+              style: TextStyle(fontSize: 14.sp)),
+          backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: _email);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('auth_password_reset_sent'.tr(),
+                style: TextStyle(fontSize: 14.sp)),
+            backgroundColor: _primaryBlue,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10.r)),
+          ),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      debugPrint("Firebase Auth Error Code (Password Reset): ${e.code}");
+      String message = 'auth_error_generic'.tr();
+
+      if (e.code == 'invalid-email' || e.code == 'user-not-found') {
+        message = 'auth_password_reset_error'.tr();
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message, style: TextStyle(fontSize: 14.sp)),
+            backgroundColor: Colors.redAccent,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10.r)),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("auth_unexpected_error".tr(),
+                style: TextStyle(fontSize: 14.sp)),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10.r)),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  // GOOGLE İLE GİRİŞ METODU (Önceki Adımdan Restore Edildi)
+  Future<void> _signInWithGoogle() async {
+    setState(() => _isLoading = true);
+
+    try {
+      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+
+      if (googleUser == null) {
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+
+      final AuthCredential credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      final UserCredential userCredential =
+          await FirebaseAuth.instance.signInWithCredential(credential);
+
+      if (userCredential.additionalUserInfo!.isNewUser) {
+        final username = userCredential.user!.email?.split('@').first ?? 'user';
+        final nameParts = googleUser.displayName?.split(' ') ?? [];
+        final firstName = nameParts.isNotEmpty ? nameParts.first : '';
+        final lastName = nameParts.length > 1 ? nameParts.last : '';
+
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userCredential.user!.uid)
+            .set({
+          'firstName': firstName,
+          'lastName': lastName,
+          'username': username,
+          'email': userCredential.user!.email,
+          'uid': userCredential.user!.uid,
+          'createdAt': FieldValue.serverTimestamp(),
+          'role': 'user',
+        });
+      }
+
+      if (mounted) Navigator.of(context).pop();
+    } on FirebaseAuthException catch (e) {
+      debugPrint("Google Auth Error Code: ${e.code}");
+      String message = 'auth_google_error'.tr();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message, style: TextStyle(fontSize: 14.sp)),
+          backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
+        ),
+      );
+    } catch (e) {
+      debugPrint("Unexpected Google Sign-in Error: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("auth_unexpected_error".tr(),
+              style: TextStyle(fontSize: 14.sp)),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  // YENİ WIDGET: Google Giriş Butonunu Oluşturur
+  Widget _buildGoogleSignInButton() {
+    return ElevatedButton(
+      onPressed: _isLoading ? null : _signInWithGoogle,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.white,
+        foregroundColor: _primaryColor,
+        padding: EdgeInsets.symmetric(vertical: 16.h),
+        elevation: 1,
+        shadowColor: Colors.black.withOpacity(0.1),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16.r),
+            side: BorderSide(color: Colors.grey.shade300)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Image.asset(
+            'assets/images/google_logo.png', // Lütfen bu dosya yolunun doğru olduğundan emin olun
+            height: 20.h,
+            errorBuilder: (context, error, stackTrace) {
+              return const Icon(Icons.g_mobiledata, color: Colors.red);
+            },
+          ),
+          SizedBox(width: 10.w),
+          Text(
+            'auth_login_google'.tr(),
+            style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -241,7 +422,25 @@ class _AuthScreenState extends State<AuthScreen> {
                             });
                           },
                         ),
-                        SizedBox(height: 24.h), // .h
+
+                        // Şifremi Unuttum Butonu (Eski Tasarıma uygun olarak yerleştirildi)
+                        if (_isLogin)
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton(
+                              onPressed: _isLoading ? null : _forgotPassword,
+                              child: Text(
+                                'auth_forgot_password'.tr(),
+                                style: TextStyle(
+                                  color: _primaryBlue,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14.sp, // .sp
+                                ),
+                              ),
+                            ),
+                          ),
+
+                        SizedBox(height: 16.h), // Aralığı ayarlamak için
 
                         if (_isLoading)
                           CircularProgressIndicator(color: _primaryBlue)
@@ -249,6 +448,7 @@ class _AuthScreenState extends State<AuthScreen> {
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
+                              // E-posta/Şifre Giriş Butonu
                               ElevatedButton(
                                 onPressed: _submit,
                                 style: ElevatedButton.styleFrom(
@@ -272,6 +472,13 @@ class _AuthScreenState extends State<AuthScreen> {
                                       fontWeight: FontWeight.bold),
                                 ),
                               ),
+
+                              // YENİ: Google İle Giriş Butonu
+                              if (_isLogin) ...[
+                                SizedBox(height: 16.h),
+                                _buildGoogleSignInButton(),
+                              ],
+
                               SizedBox(height: 16.h), // .h
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
@@ -356,7 +563,7 @@ class _AuthScreenState extends State<AuthScreen> {
     );
   }
 
-  // Modern Input Widget
+  // Modern Input Widget (Orjinal Tasarım Korundu)
   Widget _buildModernInput({
     required String label,
     required IconData icon,
