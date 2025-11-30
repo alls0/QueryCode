@@ -15,7 +15,6 @@ class MyEventsScreen extends StatefulWidget {
 
 class _MyEventsScreenState extends State<MyEventsScreen> {
   // --- VERİ DEĞİŞKENLERİ ---
-  // Tek bir liste yerine 3 ayrı liste tutuyoruz
   List<DocumentSnapshot> _ongoingEvents = [];
   List<DocumentSnapshot> _upcomingEvents = [];
   List<DocumentSnapshot> _endedEvents = [];
@@ -278,6 +277,26 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
     );
   }
 
+  // --- YENİ EKLENEN YARDIMCI FONKSİYON ---
+  // Süreyi yerelleştirilmiş (tr/en) formata çevirir
+  String _formatDuration(Duration duration) {
+    if (duration.inDays > 0) {
+      return "time_format_d_h".tr(namedArgs: {
+        'd': duration.inDays.toString(),
+        'h': (duration.inHours % 24).toString(),
+      });
+    } else if (duration.inHours > 0) {
+      return "time_format_h_m".tr(namedArgs: {
+        'h': duration.inHours.toString(),
+        'm': (duration.inMinutes % 60).toString(),
+      });
+    } else {
+      return "time_format_m".tr(namedArgs: {
+        'm': duration.inMinutes.toString(),
+      });
+    }
+  }
+
   Widget _buildHeader() {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 20.h),
@@ -350,11 +369,43 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
   Widget _buildEventCard(DocumentSnapshot eventDoc, int index) {
     final eventData = eventDoc.data() as Map<String, dynamic>;
     final eventId = eventDoc.id;
-    final Timestamp timestamp = eventData['createdAt'] ?? Timestamp.now();
-    final date = timestamp.toDate();
     final bool isFavorite = _favoriteEventIds.contains(eventId);
     final String title =
         eventData['eventTitle'] ?? "${"events_prefix".tr()}${index + 1}";
+
+    // --- YENİ EKLENEN ZAMAN MANTIĞI ---
+    final Timestamp startTs = eventData['startTime'] ?? Timestamp.now();
+    final Timestamp endTs = eventData['endTime'] ?? Timestamp.now();
+    final DateTime startDate = startTs.toDate();
+    final DateTime endDate = endTs.toDate();
+    final DateTime now = DateTime.now();
+
+    String statusText = "";
+    Color statusColor = _secondaryColor;
+    IconData statusIcon = Icons.access_time_rounded;
+
+    if (endDate.isBefore(now)) {
+      // DURUM 1: Etkinlik BİTTİ
+      String formattedDate = "${endDate.day}/${endDate.month}/${endDate.year}";
+      statusText = "card_status_ended".tr(namedArgs: {'date': formattedDate});
+      statusColor = Colors.red.shade400;
+      statusIcon = Icons.event_busy_rounded;
+    } else if (startDate.isAfter(now)) {
+      // DURUM 2: Henüz BAŞLAMADI
+      Duration remaining = startDate.difference(now);
+      statusText = "card_status_starts_in"
+          .tr(namedArgs: {'time': _formatDuration(remaining)});
+      statusColor = Colors.orange.shade700;
+      statusIcon = Icons.timer_outlined;
+    } else {
+      // DURUM 3: Şu an DEVAM EDİYOR
+      Duration remaining = endDate.difference(now);
+      statusText = "card_status_ends_in"
+          .tr(namedArgs: {'time': _formatDuration(remaining)});
+      statusColor = Colors.green.shade600;
+      statusIcon = Icons.timelapse_rounded;
+    }
+    // -----------------------------------
 
     return Container(
       margin: EdgeInsets.only(bottom: 12.h),
@@ -407,13 +458,32 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      SizedBox(height: 4.h),
-                      Text(
-                        "${date.day}/${date.month}/${date.year} • ${date.hour}:${date.minute.toString().padLeft(2, '0')}",
-                        style: TextStyle(
-                            color: _secondaryColor,
-                            fontSize: 12.sp,
-                            fontWeight: FontWeight.w500),
+                      SizedBox(height: 6.h),
+
+                      // Renkli Durum Kutucuğu
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                            horizontal: 8.w, vertical: 4.h),
+                        decoration: BoxDecoration(
+                          color: statusColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(6.r),
+                          border:
+                              Border.all(color: statusColor.withOpacity(0.3)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(statusIcon, size: 12.sp, color: statusColor),
+                            SizedBox(width: 4.w),
+                            Text(
+                              statusText,
+                              style: TextStyle(
+                                  color: statusColor,
+                                  fontSize: 11.sp,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -512,10 +582,11 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
                     labelStyle:
                         TextStyle(fontSize: 12.sp, fontWeight: FontWeight.bold),
                     tabs: [
-                      // Burada "tr()" anahtarlarını uygun çevirilerle değiştirin
-                      Tab(text: "Devam Eden"), // ongoing
-                      Tab(text: "Başlamayan"), // upcoming
-                      Tab(text: "Geçmiş"), // past
+                      // Eğer bu metinleri de çevirmek isterseniz .tr() ekleyebilirsiniz
+                      // Örneğin: Tab(text: "tab_ongoing".tr()),
+                      Tab(text: "active_tab".tr()),
+                      Tab(text: "not_started_tab".tr()),
+                      Tab(text: "past_tab".tr()),
                     ],
                   ),
                 ),

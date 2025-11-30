@@ -4,11 +4,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'qr_result_screen.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:path/path.dart' as path_utils;
 import 'package:flutter_screenutil/flutter_screenutil.dart'; // <-- EKLENDİ
+// Diğer importların altına ekleyin:
+import 'my_events_screen.dart';
 
 // --- MODEL ---
 class QuestionModel {
@@ -37,6 +38,131 @@ class CreateQuestionScreen extends StatefulWidget {
 }
 
 class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
+  // --- LİMİT KONTROL FONKSİYONU ---
+
+  // Hata Diyaloğu Gösteren Yardımcı Fonksiyon
+  void _showLimitDialog(String message, {required bool showGoToEvents}) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent, // Material 3 renk tonunu kaldırır
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(24.r)),
+        child: Padding(
+          padding: EdgeInsets.all(24.r),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 1. Üst İkon (Hafif Kırmızı Arkaplanlı)
+              Container(
+                padding: EdgeInsets.all(16.r),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.report_gmailerrorred_rounded, // Uyarı ikonu
+                  color: Colors.red.shade400,
+                  size: 36.sp,
+                ),
+              ),
+              SizedBox(height: 20.h),
+
+              // 2. Başlık
+              Text(
+                "limit_error_title".tr(),
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 20.sp,
+                  fontWeight: FontWeight.w800,
+                  color: _primaryDark,
+                ),
+              ),
+              SizedBox(height: 12.h),
+
+              // 3. Mesaj İçeriği
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14.sp,
+                  color: Colors.grey.shade600,
+                  height: 1.5, // Satır arası boşluk okunabilirliği artırır
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              SizedBox(height: 28.h),
+
+              // 4. Butonlar
+              Row(
+                children: [
+                  // İPTAL BUTONU (Her zaman görünür)
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.symmetric(vertical: 14.h),
+                        backgroundColor: Colors.grey.shade50,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14.r),
+                          side: BorderSide(color: Colors.grey.shade200),
+                        ),
+                      ),
+                      child: Text(
+                        "cancel".tr(),
+                        style: TextStyle(
+                          color: _primaryDark,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14.sp,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // ETKİNLİKLERE GİT BUTONU (Sadece hafıza doluyken görünür)
+                  if (showGoToEvents) ...[
+                    SizedBox(width: 12.w),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.pop(context); // Diyaloğu kapat
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => const MyEventsScreen()),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _primaryDark,
+                          padding: EdgeInsets.symmetric(vertical: 14.h),
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14.r),
+                          ),
+                          shadowColor: _primaryDark.withOpacity(0.3),
+                        ),
+                        child: Text(
+                          "go_to_events".tr(),
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13.sp,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   // --- LİMİTLER ---
   static const int _maxQuestions = 10;
   static const int _maxOptions = 10;
@@ -160,26 +286,6 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
     }
   }
 
-  Future<void> _pickFile(int index) async {
-    if (_questions[index].attachments.length >= _maxAttachments) {
-      _showWarning(
-          "create_max_file".tr(namedArgs: {'limit': '$_maxAttachments'}));
-      return;
-    }
-    try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles();
-      if (result != null && result.files.single.path != null) {
-        setState(() {
-          _questions[index]
-              .attachments
-              .add({'path': result.files.single.path!, 'type': 'file'});
-        });
-      }
-    } catch (e) {
-      debugPrint("Dosya hatası: $e");
-    }
-  }
-
   void _removeAttachment(int questionIndex, int attachmentIndex) {
     setState(() {
       _questions[questionIndex].attachments.removeAt(attachmentIndex);
@@ -191,42 +297,34 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
       context: context,
       backgroundColor: _surfaceWhite,
       shape: RoundedRectangleBorder(
-          borderRadius:
-              BorderRadius.vertical(top: Radius.circular(20.r))), // .r EKLENDİ
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20.r))),
       builder: (context) {
         return SafeArea(
           child: Wrap(
             children: <Widget>[
+              // KAMERA
               ListTile(
                   leading: Icon(Icons.camera_alt_rounded,
-                      color: _primaryDark, size: 24.sp), // .sp EKLENDİ
+                      color: _primaryDark, size: 24.sp),
                   title: Text('create_media_take_photo'.tr(),
-                      style: TextStyle(
-                          color: _primaryDark, fontSize: 16.sp)), // .sp EKLENDİ
+                      style: TextStyle(color: _primaryDark, fontSize: 16.sp)),
                   onTap: () {
                     Navigator.pop(context);
                     _pickImage(index, ImageSource.camera);
                   }),
+
+              // GALERİ
               ListTile(
                   leading: Icon(Icons.photo_library_rounded,
-                      color: _primaryDark, size: 24.sp), // .sp EKLENDİ
+                      color: _primaryDark, size: 24.sp),
                   title: Text('create_media_gallery'.tr(),
-                      style: TextStyle(
-                          color: _primaryDark, fontSize: 16.sp)), // .sp EKLENDİ
+                      style: TextStyle(color: _primaryDark, fontSize: 16.sp)),
                   onTap: () {
                     Navigator.pop(context);
                     _pickImage(index, ImageSource.gallery);
                   }),
-              ListTile(
-                  leading: Icon(Icons.attach_file_rounded,
-                      color: _primaryDark, size: 24.sp), // .sp EKLENDİ
-                  title: Text('create_media_file'.tr(),
-                      style: TextStyle(
-                          color: _primaryDark, fontSize: 16.sp)), // .sp EKLENDİ
-                  onTap: () {
-                    Navigator.pop(context);
-                    _pickFile(index);
-                  }),
+
+              // (BURADAKİ "DOSYA EKLE" LISTTILE'INI SİLDİK)
             ],
           ),
         );
@@ -278,7 +376,54 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
     return await snapshot.ref.getDownloadURL();
   }
 
+  Future<bool> _checkCreationLimits() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return false;
+
+    // 1. Toplam Limit Kontrolü (Max 15)
+    final allEventsQuery = await FirebaseFirestore.instance
+        .collection('events')
+        .where('creatorId', isEqualTo: user.uid)
+        .get(); // count() fonksiyonu varsa onu kullanmak daha performanslıdır
+
+    if (allEventsQuery.docs.length >= 15) {
+      if (mounted) {
+        _showLimitDialog(
+          "limit_storage_full".tr(),
+          showGoToEvents: true, // Silme ekranına yönlendirme butonu
+        );
+      }
+      return false; // İşlemi durdur
+    }
+
+    // 2. Günlük Limit Kontrolü (Max 10)
+    final now = DateTime.now();
+    // Bugünün başlangıcı (Saat 00:00:00)
+    final startOfDay = DateTime(now.year, now.month, now.day);
+
+    final dailyEventsQuery = await FirebaseFirestore.instance
+        .collection('events')
+        .where('creatorId', isEqualTo: user.uid)
+        .where('createdAt',
+            isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
+        .get();
+
+    if (dailyEventsQuery.docs.length >= 10) {
+      if (mounted) {
+        _showLimitDialog(
+          "limit_daily_reached".tr(),
+          showGoToEvents: false,
+        );
+      }
+      return false; // İşlemi durdur
+    }
+
+    return true; // Limitler aşılmadı, devam et
+  }
+
   Future<void> _createEventAndNavigate() async {
+    bool canCreate = await _checkCreationLimits();
+    if (!canCreate) return;
     _syncData();
     setState(() => _isLoading = true);
 
@@ -407,6 +552,7 @@ class _CreateQuestionScreenState extends State<CreateQuestionScreen> {
               children: [
                 // SORU METNİ
                 TextField(
+                    maxLength: 200,
                     controller: question.textController,
                     maxLines: 3,
                     style: TextStyle(
